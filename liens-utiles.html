@@ -1,124 +1,339 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mes Liens</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
-  <script>
-    tailwind.config = { theme: { extend: { fontFamily: {
-      sans: ['Outfit', 'sans-serif'],
-      mono: ['"JetBrains Mono"', 'monospace'],
-    }}}}
-  </script>
-</head>
-<body class="font-sans bg-stone-50 text-stone-800 min-h-screen">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mes Liens</title>
+    <style>
+      /* ── Reset & Base ── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          "Segoe UI",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #fafaf9;
+        color: #292524;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
 
-  <div class="max-w-3xl mx-auto px-5 py-16">
+      /* ── Layout ── */
+      .container {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 60px 20px 80px;
+      }
 
-    <h1 class="text-4xl font-bold tracking-tight mb-1">mes liens<span class="text-orange-500">.</span></h1>
-    <p class="text-stone-400 text-sm font-mono mb-12">tout ce que je ne veux pas perdre</p>
+      /* ── Header ── */
+      h1 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1;
+      }
+      h1 span {
+        color: #f97316;
+      }
+      .subtitle {
+        font-family: "Cascadia Code", "SF Mono", "Consolas", monospace;
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #a8a29e;
+        margin-top: 4px;
+        margin-bottom: 48px;
+      }
 
+      /* ── Sections ── */
+      section {
+        margin-bottom: 36px;
+      }
+      h2 {
+        font-family: "Cascadia Code", "SF Mono", "Consolas", monospace;
+        font-size: 0.7rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+      .links {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
 
-    <!-- ══ Dev ══ -->
-    <section class="mb-10">
-      <h2 class="text-xs font-mono uppercase tracking-widest text-emerald-600 mb-3">Dev & Code</h2>
-      <div class="space-y-2">
+      /* ── Link card ── */
+      .link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        border: 1px solid;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+      .link:hover .arrow {
+        opacity: 1;
+      }
+      .link-name {
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition: color 0.15s;
+      }
+      .link-desc {
+        font-size: 0.875rem;
+        color: #a8a29e;
+        margin-left: 8px;
+      }
+      .arrow {
+        opacity: 0;
+        font-size: 0.85rem;
+        transition: opacity 0.15s;
+        flex-shrink: 0;
+      }
 
-        <a href="https://tailwindcss.com/docs" target="_blank" class="flex items-center justify-between gap-4 rounded-lg border border-emerald-100 bg-emerald-50/50 px-4 py-3 hover:bg-emerald-100/60 transition group">
-          <div>
-            <span class="font-semibold text-sm group-hover:text-emerald-700 transition">Tailwind CSS</span>
-            <span class="text-stone-400 text-sm ml-2">— Documentation officielle</span>
-          </div>
-          <span class="text-emerald-400 opacity-0 group-hover:opacity-100 transition">↗</span>
+      /* ── Color themes per section ── */
+
+      /* Vert — Dev */
+      .t-green h2 {
+        color: #059669;
+      }
+      .t-green .link {
+        border-color: #d1fae5;
+        background: rgba(209, 250, 229, 0.3);
+      }
+      .t-green .link:hover {
+        background: rgba(167, 243, 208, 0.35);
+      }
+      .t-green .link:hover .link-name {
+        color: #047857;
+      }
+      .t-green .arrow {
+        color: #6ee7b7;
+      }
+
+      /* Violet — Design */
+      .t-violet h2 {
+        color: #7c3aed;
+      }
+      .t-violet .link {
+        border-color: #ede9fe;
+        background: rgba(237, 233, 254, 0.3);
+      }
+      .t-violet .link:hover {
+        background: rgba(221, 214, 254, 0.4);
+      }
+      .t-violet .link:hover .link-name {
+        color: #6d28d9;
+      }
+      .t-violet .arrow {
+        color: #c4b5fd;
+      }
+
+      /* Orange — Outils */
+      .t-amber h2 {
+        color: #d97706;
+      }
+      .t-amber .link {
+        border-color: #fef3c7;
+        background: rgba(254, 243, 199, 0.3);
+      }
+      .t-amber .link:hover {
+        background: rgba(253, 230, 138, 0.35);
+      }
+      .t-amber .link:hover .link-name {
+        color: #b45309;
+      }
+      .t-amber .arrow {
+        color: #fcd34d;
+      }
+
+      /* Bleu — Veille */
+      .t-sky h2 {
+        color: #0284c7;
+      }
+      .t-sky .link {
+        border-color: #e0f2fe;
+        background: rgba(224, 242, 254, 0.3);
+      }
+      .t-sky .link:hover {
+        background: rgba(186, 230, 253, 0.35);
+      }
+      .t-sky .link:hover .link-name {
+        color: #0369a1;
+      }
+      .t-sky .arrow {
+        color: #7dd3fc;
+      }
+
+      /* Rose — Perso */
+      .t-rose h2 {
+        color: #e11d48;
+      }
+      .t-rose .link {
+        border-color: #ffe4e6;
+        background: rgba(255, 228, 230, 0.3);
+      }
+      .t-rose .link:hover {
+        background: rgba(254, 205, 211, 0.35);
+      }
+      .t-rose .link:hover .link-name {
+        color: #be123c;
+      }
+      .t-rose .arrow {
+        color: #fda4af;
+      }
+
+      /* Turquoise */
+      .t-teal h2 {
+        color: #0d9488;
+      }
+      .t-teal .link {
+        border-color: #ccfbf1;
+        background: rgba(204, 251, 241, 0.3);
+      }
+      .t-teal .link:hover {
+        background: rgba(153, 246, 228, 0.3);
+      }
+      .t-teal .link:hover .link-name {
+        color: #0f766e;
+      }
+      .t-teal .arrow {
+        color: #5eead4;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>mes liens<span>.</span></h1>
+      <p class="subtitle">tout ce que je ne veux pas perdre</p>
+
+      <!-- ══ Dev & Code (vert) ══ -->
+      <section class="t-green">
+        <h2>Dev & Code</h2>
+        <div class="links">
+          <a href="https://tailwindcss.com/docs" target="_blank" class="link">
+            <div>
+              <span class="link-name">Tailwind CSS</span
+              ><span class="link-desc">— Documentation officielle</span>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+
+          <a
+            href="https://developer.mozilla.org/fr/"
+            target="_blank"
+            class="link"
+          >
+            <div>
+              <span class="link-name">MDN Web Docs</span
+              ><span class="link-desc">— Référence HTML, CSS, JS</span>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+
+          <a href="https://github.com" target="_blank" class="link">
+            <div>
+              <span class="link-name">GitHub</span
+              ><span class="link-desc">— Repos, issues, PRs</span>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- ══ Design (violet) ══ -->
+      <section class="t-violet">
+        <h2>Design & Inspi</h2>
+        <div class="links">
+          <a href="https://unsplash.com" target="_blank" class="link">
+            <div>
+              <span class="link-name">Unsplash</span
+              ><span class="link-desc">— Photos libres de droits</span>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+
+          <a href="https://dribbble.com" target="_blank" class="link">
+            <div>
+              <span class="link-name">Dribbble</span
+              ><span class="link-desc">— Inspiration UI/UX</span>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- ══ Outils (orange) ══ -->
+      <section class="t-amber">
+        <h2>Outils</h2>
+        <div class="links">
+          <a href="https://excalidraw.com" target="_blank" class="link">
+            <div>
+              <span class="link-name">Excalidraw</span
+              ><span class="link-desc">— Whiteboard hand-drawn</span>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+
+          <a href="https://notion.so" target="_blank" class="link">
+            <div>
+              <span class="link-name">Notion</span
+              ><span class="link-desc">— Notes et docs tout-en-un</span>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- ══ Veille (bleu) ══ -->
+      <section class="t-sky">
+        <h2>Veille</h2>
+        <div class="links">
+          <a href="https://news.ycombinator.com" target="_blank" class="link">
+            <div>
+              <span class="link-name">Hacker News</span
+              ><span class="link-desc">— Actu tech et startups</span>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+        </div>
+      </section>
+
+      <!--
+      ══════════════════════════════════════════
+       COMMENT ÉDITER CE FICHIER
+      ══════════════════════════════════════════
+
+      AJOUTER UN LIEN :
+      Copier ce bloc dans la section voulue :
+
+        <a href="URL_ICI" target="_blank" class="link">
+          <div><span class="link-name">NOM</span><span class="link-desc">— Description</span></div>
+          <span class="arrow">↗</span>
         </a>
 
-        <a href="https://developer.mozilla.org/fr/" target="_blank" class="flex items-center justify-between gap-4 rounded-lg border border-emerald-100 bg-emerald-50/50 px-4 py-3 hover:bg-emerald-100/60 transition group">
-          <div>
-            <span class="font-semibold text-sm group-hover:text-emerald-700 transition">MDN Web Docs</span>
-            <span class="text-stone-400 text-sm ml-2">— Référence HTML, CSS, JS</span>
-          </div>
-          <span class="text-emerald-400 opacity-0 group-hover:opacity-100 transition">↗</span>
-        </a>
+      AJOUTER UNE SECTION :
+      Copier un bloc <section>…</section> et changer la classe :
+        t-green   → vert        t-violet → violet
+        t-amber   → orange      t-sky    → bleu
+        t-rose    → rose        t-teal   → turquoise
 
-        <a href="https://github.com" target="_blank" class="flex items-center justify-between gap-4 rounded-lg border border-emerald-100 bg-emerald-50/50 px-4 py-3 hover:bg-emerald-100/60 transition group">
-          <div>
-            <span class="font-semibold text-sm group-hover:text-emerald-700 transition">GitHub</span>
-            <span class="text-stone-400 text-sm ml-2">— Repos, issues, PRs</span>
-          </div>
-          <span class="text-emerald-400 opacity-0 group-hover:opacity-100 transition">↗</span>
-        </a>
-
-      </div>
-    </section>
-
-
-    <!-- ══ Design ══ -->
-    <section class="mb-10">
-      <h2 class="text-xs font-mono uppercase tracking-widest text-violet-600 mb-3">Design & Inspi</h2>
-      <div class="space-y-2">
-
-        <a href="https://unsplash.com" target="_blank" class="flex items-center justify-between gap-4 rounded-lg border border-violet-100 bg-violet-50/50 px-4 py-3 hover:bg-violet-100/60 transition group">
-          <div>
-            <span class="font-semibold text-sm group-hover:text-violet-700 transition">Unsplash</span>
-            <span class="text-stone-400 text-sm ml-2">— Photos libres de droits</span>
-          </div>
-          <span class="text-violet-400 opacity-0 group-hover:opacity-100 transition">↗</span>
-        </a>
-
-        <a href="https://dribbble.com" target="_blank" class="flex items-center justify-between gap-4 rounded-lg border border-violet-100 bg-violet-50/50 px-4 py-3 hover:bg-violet-100/60 transition group">
-          <div>
-            <span class="font-semibold text-sm group-hover:text-violet-700 transition">Dribbble</span>
-            <span class="text-stone-400 text-sm ml-2">— Inspiration UI/UX</span>
-          </div>
-          <span class="text-violet-400 opacity-0 group-hover:opacity-100 transition">↗</span>
-        </a>
-
-      </div>
-    </section>
-
-
-    <!-- ══ Outils ══ -->
-    <section class="mb-10">
-      <h2 class="text-xs font-mono uppercase tracking-widest text-amber-600 mb-3">Outils</h2>
-      <div class="space-y-2">
-
-        <a href="https://excalidraw.com" target="_blank" class="flex items-center justify-between gap-4 rounded-lg border border-amber-100 bg-amber-50/50 px-4 py-3 hover:bg-amber-100/60 transition group">
-          <div>
-            <span class="font-semibold text-sm group-hover:text-amber-700 transition">Excalidraw</span>
-            <span class="text-stone-400 text-sm ml-2">— Whiteboard hand-drawn</span>
-          </div>
-          <span class="text-amber-400 opacity-0 group-hover:opacity-100 transition">↗</span>
-        </a>
-
-        <a href="https://notion.so" target="_blank" class="flex items-center justify-between gap-4 rounded-lg border border-amber-100 bg-amber-50/50 px-4 py-3 hover:bg-amber-100/60 transition group">
-          <div>
-            <span class="font-semibold text-sm group-hover:text-amber-700 transition">Notion</span>
-            <span class="text-stone-400 text-sm ml-2">— Notes et docs tout-en-un</span>
-          </div>
-          <span class="text-amber-400 opacity-0 group-hover:opacity-100 transition">↗</span>
-        </a>
-
-      </div>
-    </section>
-
-
-    <!--
-      ══ COMMENT AJOUTER ══
-
-      Un lien : copier un bloc <a>…</a> dans la section voulue.
-
-      Une section : copier un bloc <section> et changer la couleur :
-        emerald → vert     violet → violet
-        amber   → orange   sky    → bleu
-        rose    → rose     teal   → turquoise
-
-      Remplacer partout dans la section : border-XX-100, bg-XX-50/50,
-      hover:bg-XX-100/60, text-XX-600, text-XX-700, text-XX-400.
-    -->
-
-  </div>
-
-</body>
+      ══════════════════════════════════════════
+    --></div>
+  </body>
 </html>
