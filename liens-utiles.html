@@ -424,6 +424,230 @@
       .t-teal .arrow {
         color: #5eead4;
       }
+
+      /* ── Header catégorie avec corbeille ── */
+      .cat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+      .cat-header h2 {
+        margin-bottom: 0;
+      }
+      .cat-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+      .btn-add-link {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 5px;
+        background: #fff7ed;
+        color: #f97316;
+        flex-shrink: 0;
+        transition: background 0.15s, color 0.15s;
+      }
+      .btn-add-link:hover {
+        background: #f97316;
+        color: #fff;
+      }
+      .btn-del-cat {
+        font-size: 0.8rem;
+        padding: 3px 6px;
+        border-radius: 5px;
+        background: #fef2f2;
+        color: #ef4444;
+        flex-shrink: 0;
+        transition: background 0.15s, color 0.15s;
+      }
+      .btn-del-cat:hover {
+        background: #ef4444;
+        color: #fff;
+      }
+      .link-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        opacity: 0;
+        transition: opacity 0.15s;
+        flex-shrink: 0;
+      }
+      .link:hover .link-actions {
+        opacity: 1;
+      }
+      .btn-edit-link,
+      .btn-del-link {
+        font-size: 0.75rem;
+        padding: 3px 7px;
+        border-radius: 5px;
+        font-weight: 600;
+        transition: background 0.15s, color 0.15s;
+      }
+      .btn-edit-link {
+        background: #fff7ed;
+        color: #f97316;
+      }
+      .btn-edit-link:hover {
+        background: #f97316;
+        color: #fff;
+      }
+      .btn-del-link {
+        background: #fef2f2;
+        color: #ef4444;
+      }
+      .btn-del-link:hover {
+        background: #ef4444;
+        color: #fff;
+      }
+
+      /* ── Barre d'actions liens ── */
+      .liens-toolbar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+      }
+
+      /* ── Bouton mode édition + bouton ajouter catégorie (styles communs) ── */
+      .btn-add-cat,
+      .btn-edit-mode {
+        font-family: "Cascadia Code", "SF Mono", "Consolas", monospace;
+        font-size: 0.65rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 7px 14px;
+        border-radius: 8px;
+        transition: border-color 0.15s, color 0.15s;
+      }
+      .btn-add-cat {
+        border: 1px dashed #d6d3d1;
+        color: #a8a29e;
+        display: none;
+      }
+      .inner:has(#linksContainer.edit-mode) .btn-add-cat {
+        display: flex;
+      }
+      .btn-add-cat:hover {
+        background: #f97316;
+        border-color: #f97316;
+        color: #fff;
+      }
+      .btn-edit-mode {
+        border: 1px solid #e7e5e4;
+        color: #78716c;
+      }
+      .btn-edit-mode:hover {
+        border-color: #292524;
+        color: #292524;
+      }
+
+      /* ── Mode édition : rendre tous les boutons d'action visibles ── */
+      .edit-mode .link-actions,
+      .edit-mode .cat-actions {
+        opacity: 1;
+      }
+      /* Masquer le hover hors mode édition */
+      .link:hover .link-actions {
+        opacity: 0;
+      }
+      .edit-mode .link:hover .link-actions {
+        opacity: 1;
+      }
+
+      /* ── Modale ── */
+      .modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(41, 37, 36, 0.4);
+        backdrop-filter: blur(2px);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-backdrop.open {
+        display: flex;
+      }
+      .modal {
+        background: #fff;
+        border-radius: 14px;
+        padding: 28px 32px;
+        width: 100%;
+        max-width: 380px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      }
+      .modal h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        letter-spacing: -0.01em;
+      }
+      .modal label {
+        display: block;
+        font-family: "Cascadia Code", "SF Mono", "Consolas", monospace;
+        font-size: 0.6rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #a8a29e;
+        margin-bottom: 5px;
+      }
+      .modal input[type="text"],
+      .modal select {
+        width: 100%;
+        padding: 9px 12px;
+        font-size: 0.875rem;
+        border: 1px solid #d6d3d1;
+        border-radius: 8px;
+        outline: none;
+        margin-bottom: 16px;
+        transition: border-color 0.15s;
+      }
+      .modal input[type="text"]:focus,
+      .modal select:focus {
+        border-color: #f97316;
+      }
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 4px;
+      }
+      .modal-actions button {
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 8px 18px;
+        border-radius: 8px;
+        transition: background 0.15s;
+      }
+      .btn-cancel {
+        border: 1px solid #e7e5e4;
+        color: #78716c;
+      }
+      .btn-cancel:hover {
+        background: #f5f5f4;
+      }
+      .btn-confirm {
+        background: #292524;
+        color: #fafaf9;
+      }
+      .btn-confirm:hover {
+        background: #f97316;
+      }
+
+      /* ── Swatch couleur dans le select ── */
+      .color-preview {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
     </style>
   </head>
   <body>
@@ -477,98 +701,146 @@
           <h1>mesLiens<span class="accent">.</span></h1>
           <p class="subtitle">tout ce que je ne veux pas perdre</p>
 
+          <div class="liens-toolbar">
+            <button class="btn-edit-mode" id="btnEditMode" onclick="toggleEditMode()">passer en mode édition</button>
+            <button class="btn-add-cat" onclick="openModalCategorie()">+ nouvelle catégorie</button>
+          </div>
+
           <div id="linksContainer"></div>
         </div>
       </div>
     </div>
 
+    <!-- ── Modale ajout catégorie ── -->
+    <div class="modal-backdrop" id="modalCategorie">
+      <div class="modal">
+        <h3>Nouvelle catégorie</h3>
+        <label for="catNom">Nom</label>
+        <input type="text" id="catNom" placeholder="ex : Lectures…" onkeydown="if(event.key==='Enter') confirmerCategorie();" />
+        <label for="catCouleur">Couleur</label>
+        <select id="catCouleur">
+          <option value="t-green">Vert</option>
+          <option value="t-violet">Violet</option>
+          <option value="t-amber">Ambre</option>
+          <option value="t-sky">Bleu ciel</option>
+          <option value="t-rose">Rose</option>
+          <option value="t-teal">Teal</option>
+        </select>
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="closeModalCategorie()">Annuler</button>
+          <button class="btn-confirm" onclick="confirmerCategorie()">Ajouter</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Modale ajout d'un lien dans une catégorie ── -->
+    <div class="modal-backdrop" id="modalLien">
+      <div class="modal">
+        <h3>Nouveau lien</h3>
+        <label for="lienNom">Nom</label>
+        <input type="text" id="lienNom" placeholder="ex : Figma" />
+        <label for="lienDesc">Description</label>
+        <input type="text" id="lienDesc" placeholder="ex : Outil de design UI" />
+        <label for="lienUrl">URL</label>
+        <input type="text" id="lienUrl" placeholder="https://…" onkeydown="if(event.key==='Enter') confirmerLien();" />
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="fermerModalLien()">Annuler</button>
+          <button class="btn-confirm" onclick="confirmerLien()">Ajouter</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Modale édition d'un lien ── -->
+    <div class="modal-backdrop" id="modalEditLien">
+      <div class="modal">
+        <h3>Modifier le lien</h3>
+        <label for="editLienNom">Nom</label>
+        <input type="text" id="editLienNom" placeholder="ex : Figma" />
+        <label for="editLienDesc">Description</label>
+        <input type="text" id="editLienDesc" placeholder="ex : Outil de design UI" />
+        <label for="editLienUrl">URL</label>
+        <input type="text" id="editLienUrl" placeholder="https://…" onkeydown="if(event.key==='Enter') confirmerEditLien();" />
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="fermerModalEditLien()">Annuler</button>
+          <button class="btn-confirm" onclick="confirmerEditLien()">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Modale confirmation suppression lien ── -->
+    <div class="modal-backdrop" id="modalConfirmSupprLien">
+      <div class="modal">
+        <h3>Supprimer le lien ?</h3>
+        <p style="font-size:0.875rem;color:#78716c;margin-bottom:24px;">
+          Cette action est irréversible.
+        </p>
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="fermerConfirmSupprLien()">Annuler</button>
+          <button class="btn-confirm" style="background:#ef4444;" onclick="confirmerSupprLien()">Supprimer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Modale confirmation suppression catégorie ── -->
+    <div class="modal-backdrop" id="modalConfirmSupprCat">
+      <div class="modal">
+        <h3>Supprimer la catégorie ?</h3>
+        <p style="font-size:0.875rem;color:#78716c;margin-bottom:24px;">
+          Tous les liens de cette catégorie seront également supprimés. Cette action est irréversible.
+        </p>
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="fermerConfirmSupprCat()">Annuler</button>
+          <button class="btn-confirm" style="background:#ef4444;" onclick="supprimerCategorie()">Supprimer</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ JS — tâches + liens ══ -->
+    <script src="mesLiens.js"></script>
     <script>
-      // ── Données des liens ──────────────────────────────────────────────
-      const mesLiens = [
-        {
-          theme: "t-green",
-          titre: "Dev & Code",
-          liens: [
-            {
-              nom: "Tailwind CSS",
-              desc: "Documentation officielle",
-              url: "https://tailwindcss.com/docs",
-            },
-            {
-              nom: "MDN Web Docs",
-              desc: "Référence HTML, CSS, JS",
-              url: "https://developer.mozilla.org/fr/",
-            },
-            {
-              nom: "GitHub",
-              desc: "Repos, issues, PRs",
-              url: "https://github.com",
-            },
-          ],
-        },
-        {
-          theme: "t-violet",
-          titre: "Design & Inspi",
-          liens: [
-            {
-              nom: "Unsplash",
-              desc: "Photos libres de droits",
-              url: "https://unsplash.com",
-            },
-            {
-              nom: "Dribbble",
-              desc: "Inspiration UI/UX",
-              url: "https://dribbble.com",
-            },
-          ],
-        },
-        {
-          theme: "t-amber",
-          titre: "Outils",
-          liens: [
-            {
-              nom: "Excalidraw",
-              desc: "Whiteboard hand-drawn",
-              url: "https://excalidraw.com",
-            },
-            {
-              nom: "Notion",
-              desc: "Notes et docs tout-en-un",
-              url: "https://notion.so",
-            },
-          ],
-        },
-        {
-          theme: "t-sky",
-          titre: "Veille",
-          liens: [
-            {
-              nom: "Hacker News",
-              desc: "Actu tech et startups",
-              url: "https://news.ycombinator.com",
-            },
-          ],
-        },
-      ];
+      // ── Données des liens (données par défaut) ────────────────────────
+      const LIENS_KEY = "mes_liens";
+
+      function loadLiens() {
+        try {
+          return JSON.parse(localStorage.getItem(LIENS_KEY)) || mesLiensDefaut;
+        } catch {
+          return mesLiensDefaut;
+        }
+      }
+
+      function saveLiens(data) {
+        localStorage.setItem(LIENS_KEY, JSON.stringify(data));
+      }
 
       function renderLiens() {
+        const data = loadLiens();
         const container = document.getElementById("linksContainer");
-        container.innerHTML = mesLiens
+        container.innerHTML = data
           .map(
-            (cat) => `
+            (cat, idx) => `
           <section class="${cat.theme}">
-            <h2>${cat.titre}</h2>
+            <div class="cat-header">
+              <h2>${cat.titre}</h2>
+              <div class="cat-actions">
+                <button class="btn-add-link" onclick="ouvrirModalLien(${idx})" title="Ajouter un lien">＋</button>
+                <button class="btn-del-cat" onclick="ouvrirConfirmSupprCat(${idx})" title="Supprimer la catégorie">✕</button>
+              </div>
+            </div>
             <div class="links">
               ${cat.liens
                 .map(
-                  (l) => `
+                  (l, lidx) => `
               <a href="${l.url}" target="_blank" class="link">
                 <div>
                   <span class="link-name">${l.nom}</span
                   ><span class="link-desc">— ${l.desc}</span>
                 </div>
                 <span class="arrow">↗</span>
+                <div class="link-actions">
+                  <button class="btn-edit-link" onclick="ouvrirModalEditLien(event, ${idx}, ${lidx})" title="Modifier le lien">✎</button>
+                  <button class="btn-del-link" onclick="supprimerLien(event, ${idx}, ${lidx})" title="Supprimer le lien">✕</button>
+                </div>
               </a>`,
                 )
                 .join("")}
@@ -578,7 +850,182 @@
           .join("");
       }
 
+      if (!localStorage.getItem(LIENS_KEY)) {
+        saveLiens(mesLiensDefaut);
+      }
+
       renderLiens();
+
+      function openModalCategorie() {
+        document.getElementById("catNom").value = "";
+        document.getElementById("catCouleur").value = "t-green";
+        document.getElementById("modalCategorie").classList.add("open");
+        document.getElementById("catNom").focus();
+      }
+
+      function closeModalCategorie() {
+        document.getElementById("modalCategorie").classList.remove("open");
+      }
+
+      function confirmerCategorie() {
+        const nom = document.getElementById("catNom").value.trim();
+        if (!nom) {
+          document.getElementById("catNom").focus();
+          return;
+        }
+        const theme = document.getElementById("catCouleur").value;
+        const data = loadLiens();
+        data.push({ theme, titre: nom, liens: [] });
+        saveLiens(data);
+        renderLiens();
+        closeModalCategorie();
+      }
+
+      // Fermer en cliquant sur le fond
+      document.getElementById("modalCategorie").addEventListener("click", function (e) {
+        if (e.target === this) closeModalCategorie();
+      });
+
+      // ── Suppression de catégorie ──
+      let idxCatASupprimer = null;
+
+      function ouvrirConfirmSupprCat(idx) {
+        idxCatASupprimer = idx;
+        document.getElementById("modalConfirmSupprCat").classList.add("open");
+      }
+
+      function fermerConfirmSupprCat() {
+        idxCatASupprimer = null;
+        document.getElementById("modalConfirmSupprCat").classList.remove("open");
+      }
+
+      function supprimerCategorie() {
+        if (idxCatASupprimer === null) return;
+        const data = loadLiens();
+        data.splice(idxCatASupprimer, 1);
+        saveLiens(data);
+        renderLiens();
+        fermerConfirmSupprCat();
+      }
+
+      document.getElementById("modalConfirmSupprCat").addEventListener("click", function (e) {
+        if (e.target === this) fermerConfirmSupprCat();
+      });
+
+      // ── Ajout d'un lien dans une catégorie ──
+      let idxCatLien = null;
+
+      function ouvrirModalLien(idx) {
+        idxCatLien = idx;
+        document.getElementById("lienNom").value = "";
+        document.getElementById("lienDesc").value = "";
+        document.getElementById("lienUrl").value = "";
+        document.getElementById("modalLien").classList.add("open");
+        document.getElementById("lienNom").focus();
+      }
+
+      function fermerModalLien() {
+        idxCatLien = null;
+        document.getElementById("modalLien").classList.remove("open");
+      }
+
+      function confirmerLien() {
+        const nom = document.getElementById("lienNom").value.trim();
+        const desc = document.getElementById("lienDesc").value.trim();
+        const url = document.getElementById("lienUrl").value.trim();
+        if (!nom || !url) {
+          document.getElementById(!nom ? "lienNom" : "lienUrl").focus();
+          return;
+        }
+        const data = loadLiens();
+        data[idxCatLien].liens.push({ nom, desc, url });
+        saveLiens(data);
+        renderLiens();
+        fermerModalLien();
+      }
+
+      document.getElementById("modalLien").addEventListener("click", function (e) {
+        if (e.target === this) fermerModalLien();
+      });
+
+      // ── Suppression d'un lien individuel ──
+      let supprLienCatIdx = null;
+      let supprLienIdx = null;
+
+      function supprimerLien(event, catIdx, lienIdx) {
+        event.preventDefault();
+        supprLienCatIdx = catIdx;
+        supprLienIdx = lienIdx;
+        document.getElementById("modalConfirmSupprLien").classList.add("open");
+      }
+
+      function fermerConfirmSupprLien() {
+        supprLienCatIdx = null;
+        supprLienIdx = null;
+        document.getElementById("modalConfirmSupprLien").classList.remove("open");
+      }
+
+      function confirmerSupprLien() {
+        if (supprLienCatIdx === null) return;
+        const data = loadLiens();
+        data[supprLienCatIdx].liens.splice(supprLienIdx, 1);
+        saveLiens(data);
+        renderLiens();
+        fermerConfirmSupprLien();
+      }
+
+      document.getElementById("modalConfirmSupprLien").addEventListener("click", function (e) {
+        if (e.target === this) fermerConfirmSupprLien();
+      });
+
+      // ── Édition d'un lien ──
+      let editLienCatIdx = null;
+      let editLienIdx = null;
+
+      function ouvrirModalEditLien(event, catIdx, lienIdx) {
+        event.preventDefault();
+        editLienCatIdx = catIdx;
+        editLienIdx = lienIdx;
+        const lien = loadLiens()[catIdx].liens[lienIdx];
+        document.getElementById("editLienNom").value = lien.nom;
+        document.getElementById("editLienDesc").value = lien.desc;
+        document.getElementById("editLienUrl").value = lien.url;
+        document.getElementById("modalEditLien").classList.add("open");
+        document.getElementById("editLienNom").focus();
+      }
+
+      function fermerModalEditLien() {
+        editLienCatIdx = null;
+        editLienIdx = null;
+        document.getElementById("modalEditLien").classList.remove("open");
+      }
+
+      function confirmerEditLien() {
+        const nom = document.getElementById("editLienNom").value.trim();
+        const desc = document.getElementById("editLienDesc").value.trim();
+        const url = document.getElementById("editLienUrl").value.trim();
+        if (!nom || !url) {
+          document.getElementById(!nom ? "editLienNom" : "editLienUrl").focus();
+          return;
+        }
+        const data = loadLiens();
+        data[editLienCatIdx].liens[editLienIdx] = { nom, desc, url };
+        saveLiens(data);
+        renderLiens();
+        fermerModalEditLien();
+      }
+
+      document.getElementById("modalEditLien").addEventListener("click", function (e) {
+        if (e.target === this) fermerModalEditLien();
+      });
+
+      // ── Mode édition ──
+      function toggleEditMode() {
+        const container = document.getElementById("linksContainer");
+        const btn = document.getElementById("btnEditMode");
+        const actif = container.classList.toggle("edit-mode");
+        btn.textContent = actif ? "quitter le mode édition" : "passer en mode édition";
+      }
     </script>
 
     <!-- ══ JS — uniquement pour les tâches ══ -->
