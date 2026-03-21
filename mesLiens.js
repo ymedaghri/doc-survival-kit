@@ -62,5 +62,16 @@ var mesLiensDefaut = [
         "url": "https://news.ycombinator.com"
       }
     ]
+  },
+  {
+    "theme": "t-green",
+    "titre": "ABC",
+    "liens": [
+      {
+        "nom": "def",
+        "desc": "",
+        "url": "#"
+      }
+    ]
   }
 ];

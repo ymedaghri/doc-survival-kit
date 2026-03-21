@@ -434,6 +434,7 @@ section {
   align-items: center;
   gap: 4px;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.15s;
 }
 .btn-add-link {
@@ -472,6 +473,7 @@ section {
   align-items: center;
   gap: 4px;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.15s;
   flex-shrink: 0;
 }
@@ -564,6 +566,11 @@ section {
 .edit-mode .link-actions,
 .edit-mode .cat-actions {
   opacity: 1;
+  pointer-events: auto;
+}
+.edit-mode .note-actions,
+.edit-mode .bloc-actions {
+  pointer-events: auto;
 }
 /* Masquer le hover hors mode édition */
 .link:hover .link-actions {
@@ -701,6 +708,7 @@ section {
   align-items: center;
   gap: 4px;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.15s;
 }
 .edit-mode .note-actions {
@@ -749,6 +757,7 @@ section {
   align-items: center;
   gap: 4px;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.15s;
 }
 .edit-mode .bloc-actions {
