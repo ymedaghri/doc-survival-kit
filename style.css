@@ -98,6 +98,7 @@ h2 {
 }
 .add-bar input[type="text"] {
   flex: 1;
+  min-width: 0;
   padding: 10px 14px;
   font-size: 0.875rem;
   border: 1px solid #d6d3d1;
