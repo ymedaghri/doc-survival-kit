@@ -97,10 +97,4 @@ var diagrammesDefaut = [
       },
     ],
   },
-  {
-    id: 1774104617783,
-    titre: "Nouveau diagramme",
-    shapes: [],
-    arrows: [],
-  },
 ];
