@@ -1,6 +1,6 @@
 {
   "name": "kit-doc-survie",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Dashboard personnel offline : tâches, notes et liens dans un seul fichier HTML — fonctionne sans serveur via file://",
   "bin": {
     "kit-doc-survie": "./bin/cli.js"
