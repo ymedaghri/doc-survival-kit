@@ -76,6 +76,35 @@ Pour ne pas perdre vos données si vous videz le cache ou changez de machine, ch
 
 ## Démarrage rapide
 
+### Via npx (recommandé)
+
+```bash
+npx kit-doc-survie
+```
+
+Crée un dossier `kit-doc-survie/` dans le répertoire courant et ouvre l'application automatiquement dans le navigateur. Les exécutions suivantes ouvrent simplement l'application sans rien écraser.
+
+> Requiert Node.js >= 16.7. Utilise Chrome ou Edge pour la sauvegarde de fichiers.
+
+### Sans aucun outil
+
+1. Copier les fichiers suivant dans un nouveau dossier
+
+- `liens-utiles.html`
+- `liens.js`
+- `mesLiens.js`
+- `mesNotes.js`
+- `notes.js`
+- `style.css`
+- `taches.js`
+
+2. Ouvrez le fichier `liens-utiles.html` dans Chrome ou Edge
+3. C'est tout.
+
+Des exemples sont déjà présents dans chaque panel pour vous donner une idée de ce que vous pouvez y mettre.
+
+### Manuellement
+
 1. Clonez ou téléchargez ce dépôt
 2. Ouvrez le fichier `liens-utiles.html` dans Chrome ou Edge
 3. C'est tout.

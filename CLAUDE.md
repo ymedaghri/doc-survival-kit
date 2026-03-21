@@ -94,14 +94,18 @@ Sauvegarde également dans le fichier `mesNotes.js` via la File System Access AP
 ```
 
 ### Types de blocs
-| Type | Balise rendue | Saisie |
+| Type | Balise rendue | Saisie dans la modale |
 |---|---|---|
-| `b` | `<b>` (display:block) | Champ texte simple |
-| `p` | `<p>` | Champ texte simple |
-| `pre` | `<pre>` | Textarea, prend toute la largeur |
-| `ul` | `<ul><li>…` | Textarea, un élément par ligne |
+| `b` | `<b>` (display:block) | `<input>` monoligne (`#blocContentInput`) |
+| `p` | `<p>` | `<input>` monoligne (`#blocContentInput`) |
+| `pre` | `<pre>` | `<textarea>` (`#blocContent`), prend toute la largeur |
+| `ul` | `<ul><li>…` | `<textarea>` (`#blocContent`), un élément par ligne |
 
-Les blocs `pre` prennent toute la largeur grâce à `.bloc-actions` en `position: absolute` sur le `.bloc-wrapper`. En mode édition, un `padding-right: 72px` est ajouté au wrapper pour éviter que le texte passe sous les boutons.
+La modale `#modalBloc` contient les deux éléments (`#blocContentInput` et `#blocContent`). `updateBlocPlaceholder()` affiche le bon champ via `display` et masque l'autre selon le type sélectionné.
+
+Les blocs `pre` sont enveloppés dans un `.pre-wrapper` (position: relative) qui contient le `<pre>` et un bouton `.btn-copy-pre` positionné en absolu en haut à droite. Ce bouton est visible au survol du `.pre-wrapper`, appelle `copierBloc(btn)`, copie le contenu dans le clipboard et affiche temporairement "copié ✓" (classe `.copied`, fond vert) pendant 1,5 s. Il est indépendant des `.bloc-actions` et visible hors mode édition.
+
+En mode édition, un `padding-right: 72px` est ajouté au `.bloc-wrapper` pour éviter que le contenu passe sous les boutons `.bloc-actions`.
 
 ### Fonctions JS clés (`notes.js`)
 | Fonction | Rôle |
@@ -125,7 +129,8 @@ Les blocs `pre` prennent toute la largeur grâce à `.bloc-actions` en `position
 | `confirmerBloc()` | Ajoute ou modifie un bloc |
 | `ouvrirConfirmSupprBloc(noteIdx, blocIdx)` | Ouvre la confirmation de suppression de bloc |
 | `supprimerBloc()` | Supprime le bloc à `supprBlocNoteIdx / supprBlocBlocIdx` |
-| `updateBlocPlaceholder()` | Met à jour le placeholder du textarea selon le type sélectionné |
+| `updateBlocPlaceholder()` | Affiche `#blocContentInput` (input) pour les types `b`/`p`, `#blocContent` (textarea) pour `pre`/`ul` ; met à jour le placeholder |
+| `copierBloc(btn)` | Copie dans le clipboard le `textContent` du `<pre>` frère dans `.pre-wrapper` ; affiche "copié ✓" + classe `.copied` pendant 1,5 s |
 
 ---
 
@@ -211,7 +216,7 @@ Apparaissent dans leur toolbar respective quand le localStorage diffère des don
 
 Piloté par la classe CSS `.edit-mode` posée sur le conteneur du panel (`#linksContainer` ou `#notesContainer`).
 
-- **Hors mode édition** : les boutons d'action sont masqués (`opacity: 0`). Les boutons "nouvelle catégorie" / "nouvelle note" sont masqués (`display: none`).
+- **Hors mode édition** : les boutons d'action sont masqués (`opacity: 0` + `pointer-events: none` — invisibles et non cliquables). Les boutons "nouvelle catégorie" / "nouvelle note" sont masqués (`display: none`).
 - **En mode édition** : les actions passent en `opacity: 1`. Les boutons d'ajout réapparaissent via `.inner:has(#linksContainer.edit-mode) .btn-add-cat` et `.inner:has(#notesContainer.edit-mode) .btn-add-note`.
 - Le bouton toggle change uniquement son texte, sans changement d'apparence visuelle.
 
@@ -237,7 +242,7 @@ Toutes les modales partagent la même structure `.modal-backdrop > .modal` et la
 | `#modalNote` | Création d'une note (titre + couleur) |
 | `#modalEditNote` | Édition titre/couleur d'une note existante |
 | `#modalConfirmSupprNote` | Confirmation de suppression de note |
-| `#modalBloc` | Ajout ou édition d'un bloc (type + textarea) — titre dynamique via `#modalBlocTitre` |
+| `#modalBloc` | Ajout ou édition d'un bloc — titre dynamique via `#modalBlocTitre` ; contient `#blocContentInput` (input, pour `b`/`p`) et `#blocContent` (textarea, pour `pre`/`ul`), un seul affiché à la fois |
 | `#modalConfirmSupprBloc` | Confirmation de suppression de bloc |
 | `#modalPremiereSauvegardeNotes` | Instructions pour la première sauvegarde de `mesNotes.js` (avec `#erreurFichierNotes`) |
 

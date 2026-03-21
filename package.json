@@ -1,0 +1,36 @@
+{
+  "name": "kit-doc-survie",
+  "version": "1.0.0",
+  "description": "Dashboard personnel offline : tâches, notes et liens dans un seul fichier HTML — fonctionne sans serveur via file://",
+  "bin": {
+    "kit-doc-survie": "./bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "liens-utiles.html",
+    "style.css",
+    "mesLiens.js",
+    "mesNotes.js",
+    "liens.js",
+    "taches.js",
+    "notes.js"
+  ],
+  "engines": {
+    "node": ">=16.7.0"
+  },
+  "keywords": [
+    "dashboard",
+    "offline",
+    "notes",
+    "taches",
+    "liens",
+    "productivity",
+    "file-based"
+  ],
+  "author": "ymedaghri",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ymedaghri/liens-utiles.git"
+  }
+}
