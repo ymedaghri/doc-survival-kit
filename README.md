@@ -46,11 +46,12 @@ Add tasks in an instant, sort them by priority, tick them off as the day goes on
 
 Everything you need to remember, organised as notes made of freely stackable blocks.
 
-- Four block types per note:
+- Five block types per note:
   - **Title** — short bold text to structure the note
   - **Text** — free paragraph
   - **Code** — monospace block with grey background (commands, regex, snippets…)
   - **List** — bullet points
+  - **Table** — columns separated by `|`, first line = headers
 - Each note has a customisable colour
 - Add, edit and delete notes and blocks in edit mode
 

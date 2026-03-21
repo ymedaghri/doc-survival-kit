@@ -197,6 +197,17 @@ function renderNotes() {
                   })
                   .join("") +
                 "</ul>";
+            } else if (bloc.type === "table") {
+              inner =
+                '<div class="table-wrapper"><table>' +
+                "<thead><tr>" +
+                bloc.headers.map(function(h) { return "<th>" + esc(h) + "</th>"; }).join("") +
+                "</tr></thead>" +
+                "<tbody>" +
+                bloc.rows.map(function(row) {
+                  return "<tr>" + row.map(function(c) { return "<td>" + esc(c) + "</td>"; }).join("") + "</tr>";
+                }).join("") +
+                "</tbody></table></div>";
             }
             return (
               '<div class="bloc-wrapper">' +
@@ -355,6 +366,7 @@ function updateBlocPlaceholder() {
   ta.style.display = useInput ? "none" : "";
   if (type === "ul") ta.placeholder = window.t.modal_bloc_placeholder_ul;
   else if (type === "pre") ta.placeholder = window.t.modal_bloc_placeholder_pre;
+  else if (type === "table") ta.placeholder = window.t.modal_bloc_placeholder_table;
   else if (type === "b") inp.placeholder = window.t.modal_bloc_placeholder_b;
   else inp.placeholder = window.t.modal_bloc_placeholder_p;
 }
@@ -389,7 +401,9 @@ function ouvrirModalEditBloc(noteIdx, blocIdx) {
     ? ""
     : bloc.type === "ul"
       ? bloc.items.join("\n")
-      : bloc.content;
+      : bloc.type === "table"
+        ? [bloc.headers.join(" | ")].concat(bloc.rows.map(function(r) { return r.join(" | "); })).join("\n")
+        : bloc.content;
   updateBlocPlaceholder();
   document.getElementById("modalBloc").classList.add("open");
   setTimeout(function () {
@@ -422,6 +436,14 @@ function confirmerBloc() {
       .filter(Boolean);
     if (!items.length) return;
     bloc = { type: "ul", items: items };
+  } else if (type === "table") {
+    var lines = raw.split("\n").map(function(l) { return l.trim(); }).filter(Boolean);
+    if (lines.length < 1) return;
+    var headers = lines[0].split("|").map(function(c) { return c.trim(); });
+    var rows = lines.slice(1).map(function(l) {
+      return l.split("|").map(function(c) { return c.trim(); });
+    });
+    bloc = { type: "table", headers: headers, rows: rows };
   } else {
     bloc = { type: type, content: raw };
   }

@@ -952,6 +952,35 @@ section {
   color: #047857;
 }
 
+/* ── Blocs tableau dans les notes ── */
+.table-wrapper {
+  overflow-x: auto;
+}
+.note-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.note-content table th,
+.note-content table td {
+  padding: 6px 10px;
+  border: 1px solid #e7e5e4;
+  text-align: left;
+  vertical-align: top;
+}
+.note-content table th {
+  font-family: "Cascadia Code", "SF Mono", "Consolas", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.03);
+  color: #78716c;
+  font-weight: 600;
+}
+.note-content table tr:hover td {
+  background: rgba(0, 0, 0, 0.02);
+}
+
 /* Textarea dans les modales */
 .modal textarea {
   width: 100%;

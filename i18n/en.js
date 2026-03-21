@@ -122,6 +122,7 @@ var i18n_en = {
   modal_bloc_type_p: "Text",
   modal_bloc_type_pre: "Code",
   modal_bloc_type_ul: "Bullet list",
+  modal_bloc_type_table: "Table",
   modal_bloc_label_content: "Content",
   modal_bloc_new: "New block",
   modal_bloc_edit: "Edit block",
@@ -129,6 +130,7 @@ var i18n_en = {
   modal_bloc_placeholder_pre: "Code…",
   modal_bloc_placeholder_b: "Title…",
   modal_bloc_placeholder_p: "Text…",
+  modal_bloc_placeholder_table: "Header 1 | Header 2 | Header 3\nValue A | Value B | Value C\nValue D | Value E | Value F",
   modal_bloc_btn_save: "Save",
 
   // Modal confirm delete block

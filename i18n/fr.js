@@ -122,6 +122,7 @@ var i18n_fr = {
   modal_bloc_type_p: "Texte",
   modal_bloc_type_pre: "Code",
   modal_bloc_type_ul: "Liste à puces",
+  modal_bloc_type_table: "Tableau",
   modal_bloc_label_content: "Contenu",
   modal_bloc_new: "Nouveau bloc",
   modal_bloc_edit: "Modifier le bloc",
@@ -129,6 +130,7 @@ var i18n_fr = {
   modal_bloc_placeholder_pre: "Code…",
   modal_bloc_placeholder_b: "Titre…",
   modal_bloc_placeholder_p: "Texte…",
+  modal_bloc_placeholder_table: "En-tête 1 | En-tête 2 | En-tête 3\nValeur A | Valeur B | Valeur C\nValeur D | Valeur E | Valeur F",
   modal_bloc_btn_save: "Enregistrer",
 
   // Modal confirm suppr bloc

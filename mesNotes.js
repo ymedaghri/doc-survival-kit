@@ -46,19 +46,22 @@ var mesNotesDefaut = [
     "theme": "t-amber",
     "titre": "Regex utiles",
     "blocs": [
-      { "type": "b", "content": "Email" },
-      { "type": "pre", "content": "^[\\w.-]+@[\\w.-]+\\.[a-z]{2,}$" },
-      { "type": "b", "content": "URL" },
-      { "type": "pre", "content": "https?:\\/\\/[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+" },
-      { "type": "b", "content": "Date JJ/MM/AAAA" },
-      { "type": "pre", "content": "^(0[1-9]|[12]\\d|3[01])\\/(0[1-9]|1[0-2])\\/\\d{4}$" },
-      { "type": "b", "content": "Flags courants" },
       {
-        "type": "ul",
-        "items": [
-          "g — global (toutes les occurrences)",
-          "i — insensible à la casse",
-          "m — multiligne (^ et $ par ligne)"
+        "type": "table",
+        "headers": ["Sujet", "Expression"],
+        "rows": [
+          ["Email", "^[\\w.-]+@[\\w.-]+\\.[a-z]{2,}$"],
+          ["URL", "https?:\\/\\/[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+"],
+          ["Date JJ/MM/AAAA", "^(0[1-9]|[12]\\d|3[01])\\/(0[1-9]|1[0-2])\\/\\d{4}$"]
+        ]
+      },
+      {
+        "type": "table",
+        "headers": ["Flag", "Description"],
+        "rows": [
+          ["g", "global — toutes les occurrences"],
+          ["i", "insensible à la casse"],
+          ["m", "multiligne (^ et $ par ligne)"]
         ]
       }
     ]
@@ -76,7 +79,8 @@ var mesNotesDefaut = [
           "Titre — texte court mis en gras",
           "Texte — paragraphe libre",
           "Code — bloc monospace à fond gris",
-          "Liste — bullet points, un élément par ligne"
+          "Liste — bullet points, un élément par ligne",
+          "Tableau — lignes séparées par |, 1re ligne = en-têtes"
         ]
       },
       { "type": "b", "content": "Pour modifier" },
