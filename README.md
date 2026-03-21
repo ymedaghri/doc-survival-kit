@@ -90,7 +90,7 @@ Crée un dossier `kit-doc-survie/` dans le répertoire courant et ouvre l'applic
 
 1. Copier les fichiers suivant dans un nouveau dossier
 
-- `liens-utiles.html`
+- `index.html`
 - `liens.js`
 - `mesLiens.js`
 - `mesNotes.js`
@@ -98,7 +98,7 @@ Crée un dossier `kit-doc-survie/` dans le répertoire courant et ouvre l'applic
 - `style.css`
 - `taches.js`
 
-2. Ouvrez le fichier `liens-utiles.html` dans Chrome ou Edge
+2. Ouvrez le fichier `index.html` dans Chrome ou Edge
 3. C'est tout.
 
 Des exemples sont déjà présents dans chaque panel pour vous donner une idée de ce que vous pouvez y mettre.
@@ -106,15 +106,15 @@ Des exemples sont déjà présents dans chaque panel pour vous donner une idée 
 ### Manuellement
 
 1. Clonez ou téléchargez ce dépôt
-2. Ouvrez le fichier `liens-utiles.html` dans Chrome ou Edge
+2. Ouvrez le fichier `index.html` dans Chrome ou Edge
 3. C'est tout.
 
 ```bash
 git clone https://github.com/ymedaghri/liens-utiles.git
 cd liens-utiles
-open liens-utiles.html   # macOS
+open index.html   # macOS
 # ou
-start liens-utiles.html  # Windows
+start index.html  # Windows
 ```
 
 Des exemples sont déjà présents dans chaque panel pour vous donner une idée de ce que vous pouvez y mettre.

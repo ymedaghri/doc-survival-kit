@@ -7,7 +7,7 @@ Application web sans framework ni dépendance externe, conçue pour fonctionner 
 Fichiers du projet :
 | Fichier | Rôle |
 |---|---|
-| `liens-utiles.html` | Structure HTML uniquement (markup + modales + balises `<script src>`) |
+| `index.html` | Structure HTML uniquement (markup + modales + balises `<script src>`) |
 | `style.css` | Tout le CSS (layout, typo, tâches, liens, notes, thèmes, modales) |
 | `mesLiens.js` | Données par défaut (`var mesLiensDefaut`) — chargé avant `liens.js` |
 | `mesNotes.js` | Données par défaut (`var mesNotesDefaut`) — chargé avant `notes.js` |

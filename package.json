@@ -7,7 +7,7 @@
   },
   "files": [
     "bin/",
-    "liens-utiles.html",
+    "index.html",
     "style.css",
     "mesLiens.js",
     "mesNotes.js",

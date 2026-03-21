@@ -7,7 +7,7 @@ const { exec } = require("child_process");
 const DEST_DIR = path.join(process.cwd(), "kit-doc-survie");
 const SRC_DIR = path.join(__dirname, "..");
 const APP_FILES = [
-  "liens-utiles.html",
+  "index.html",
   "style.css",
   "liens.js",
   "taches.js",
@@ -31,7 +31,7 @@ function openBrowser(filePath) {
   });
 }
 
-const htmlFile = path.join(DEST_DIR, "liens-utiles.html");
+const htmlFile = path.join(DEST_DIR, "index.html");
 
 if (fs.existsSync(DEST_DIR)) {
   console.log("Le dossier kit-doc-survie existe déjà.");
