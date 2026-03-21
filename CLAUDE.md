@@ -111,7 +111,7 @@ Les blocs `pre` prennent toute la largeur grâce à `.bloc-actions` en `position
 | `renderNotes()` | Génère le HTML de toutes les notes, préserve `.edit-mode` |
 | `checkDiffNotes()` | Compare localStorage avec `mesNotesDefaut` — affiche/masque `#btnSaveNotes` |
 | `enregistrerModificationsNotes()` | Récupère le handle IndexedDB ; si absent, ouvre la modale d'instruction |
-| `ouvrirSelecteurFichierNotes()` | Ouvre `showSaveFilePicker`, vérifie que le nom est `mesNotes.js`, stocke le handle, écrit |
+| `ouvrirSelecteurFichierNotes()` | Ouvre `showDirectoryPicker`, récupère `mesNotes.js` par nom, stocke le handle, écrit |
 | `ecrireFichierNotes(handle)` | Écrit dans `mesNotes.js`, met à jour `mesNotesDefaut` en mémoire, appelle `checkDiffNotes()` |
 | `toggleEditModeNotes()` | Active / désactive le mode édition sur `#notesContainer` |
 | `openModalNote()` | Ouvre la modale de création de note |
@@ -159,7 +159,7 @@ Au premier chargement, si la clé est absente, on initialise avec `mesLiensDefau
 | `renderLiens()` | Génère tout le HTML des sections + appelle `checkDiff()` |
 | `checkDiff()` | Compare localStorage avec `mesLiensDefaut` en mémoire — affiche/masque `#btnSave` |
 | `enregistrerModifications()` | Récupère le handle IndexedDB ; si absent, ouvre la modale d'instruction |
-| `ouvrirSelecteurFichier()` | Ouvre `showSaveFilePicker`, vérifie que le nom est `mesLiens.js`, stocke le handle, écrit |
+| `ouvrirSelecteurFichier()` | Ouvre `showDirectoryPicker`, récupère `mesLiens.js` par nom, stocke le handle, écrit |
 | `ecrireFichier(handle)` | Écrit le contenu dans `mesLiens.js`, met à jour `mesLiensDefaut` en mémoire, appelle `checkDiff()` |
 | `openModalCategorie()` | Ouvre la modale d'ajout de catégorie |
 | `confirmerCategorie()` | Valide et persiste la nouvelle catégorie |
