@@ -172,6 +172,16 @@ var diagrammesDefaut = [
         "h": 115,
         "text": "Zoom & Navigation\n\nMolette = zoom centré sur curseur.\nDrag fond vide = déplacer la vue.",
         "color": "t-amber"
+      },
+      {
+        "id": "s1774269591962",
+        "type": "postit",
+        "x": 301,
+        "y": 647,
+        "w": 402,
+        "h": 183,
+        "text": "GOLDEN FEATURE !\n\nCOLLER VOS IMAGES (CAPTURES D'ECRAN)\nDIRECTEMENT DANS CE BOARD !!!!",
+        "color": "t-rose"
       }
     ],
     "arrows": [
