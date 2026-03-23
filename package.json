@@ -1,6 +1,6 @@
 {
   "name": "doc-survival-kit",
-  "version": "3.7.0",
+  "version": "3.7.1",
   "description": "Dashboard personnel offline : diagrammes, tâches, notes et liens dans un seul fichier HTML — fonctionne sans serveur via file://",
   "bin": {
     "doc-survival-kit": "./bin/cli.js"
@@ -18,7 +18,8 @@
     "liens.js",
     "taches.js",
     "notes.js",
-    "diagram.js"
+    "diagram.js",
+    "images/"
   ],
   "engines": {
     "node": ">=16.7.0"
