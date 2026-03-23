@@ -156,6 +156,7 @@ var i18n_en = {
   diag_tool_db:      "Database",
   diag_tool_cloud:   "External service / Cloud",
   diag_tool_text:    "Free text",
+  diag_tool_postit:  "Post-it (no arrow connection)",
   diag_tool_arrow:   "Arrow (click source → click target, or drag from a connection dot)",
   diag_tool_delete:  "Delete selection (Del)",
   diag_first_save_error: "File not found. Select the folder containing <strong>diagrammes.js</strong>.",

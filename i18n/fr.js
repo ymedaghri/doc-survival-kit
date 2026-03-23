@@ -156,6 +156,7 @@ var i18n_fr = {
   diag_tool_db:      "Base de données",
   diag_tool_cloud:   "Service externe / Cloud",
   diag_tool_text:    "Texte libre",
+  diag_tool_postit:  "Post-it (sans connexion de flèche)",
   diag_tool_arrow:   "Flèche (clic source → clic cible, ou drag depuis un point de connexion)",
   diag_tool_delete:  "Supprimer la sélection (Del)",
   diag_first_save_error: "Fichier introuvable. Sélectionne le dossier contenant <strong>diagrammes.js</strong>.",
