@@ -1,6 +1,6 @@
-# myTasks. myNotes. myLinks.
+# myTasks. myNotes. myLinks. & Diagrams !
 
-> A three-column personal productivity dashboard — zero dependencies, zero server, zero security compromises. Available in **French** and **English**.
+> A three-column personal productivity dashboard, and a diagramming tool with zero dependencies, zero server, zero security compromises. Available in **French** and **English**.
 
 ## Security — why this project can be used anywhere
 
@@ -71,14 +71,67 @@ Your links organised by category, accessible in one click.
 
 A lightweight SVG diagram editor accessible via the diagram icon (top-right of the dashboard).
 
-- Five shape types: **Rectangle**, **Rounded rectangle**, **Database** (cylinder), **Cloud** (external service), **Free text**
-- Draw **arrows** between shapes by clicking source → target, or by dragging from a connection dot — the label input opens automatically
-- **Double-click** on any shape or arrow (or use the ✎ button) to edit its label inline
-- **Colour** each shape with the six theme colours
-- **Resize** shapes by dragging the bottom-right handle
-- **Pan** by dragging on the canvas background; **zoom** with the mouse wheel or toolbar buttons
-- Manage multiple diagrams from the ☰ panel
-- Saves directly to `diagrammes.js` on disk (same File System Access API mechanism as notes and links)
+![Diagram editor overview](images/diagram-overview.png)
+
+#### Shapes
+
+Six shape types are available from the toolbar:
+
+| Shape             | Description                                               |
+| ----------------- | --------------------------------------------------------- |
+| Rectangle         | Standard box with slightly rounded corners                |
+| Rounded rectangle | Pill-shaped box                                           |
+| Database          | Cylinder — represents a data store                        |
+| External service  | Solid ellipse — represents a third-party or cloud service |
+| Free text         | Label without a background                                |
+| Post-it           | Sticky note with a folded corner, multi-line text         |
+
+#### Arrows
+
+- Draw arrows by clicking **source → target** with the arrow tool, or by **dragging from a connection dot** on any shape
+- The label input opens automatically after creating an arrow
+- **Double-click** an arrow (or use the ✎ button) to edit its label
+
+#### Text editing
+
+- **Double-click** a shape (or use the ✎ button) to edit its text inline
+- For `rect`, `rounded`, `db`, `cloud` and `postit` shapes, a **transparent textarea** is overlaid directly on the shape — text wraps automatically as you type
+- The text input for the `db` cylinder is positioned in the **body only**, below the top cap
+
+#### Text formatting palette
+
+When a shape is selected, a formatting palette appears. From left to right:
+
+| Control       | Effect                                                                                             |
+| ------------- | -------------------------------------------------------------------------------------------------- |
+| 6 colour dots | Apply a theme colour to the shape                                                                  |
+| ✎             | Open the inline text editor                                                                        |
+| `Aa+` / `Aa−` | Increase / decrease font size (range: 8–28 px)                                                     |
+| ← / ↔ / →     | Horizontal text alignment: left / centre / right                                                   |
+| ↑ / ↕ / ↓     | Vertical text alignment: top / middle / bottom                                                     |
+| Hollow drop   | Copy the **font size** from another shape — click the button then click the source shape           |
+| Filled drop   | Copy the **full style** from another shape (font size, colour, shape type, dimensions, alignments) |
+
+> The style copy (filled drop) works with multi-selection: select several shapes, activate the drop, click the source — all selected shapes are updated at once.
+
+#### Text wrapping
+
+Text in `rect`, `rounded`, `db`, `cloud` and `postit` shapes wraps automatically to fit the shape width. Resizing a shape immediately re-flows the text. The font size set via `Aa+`/`Aa−` is also taken into account when computing line breaks.
+
+#### Zoom per diagram
+
+Each diagram remembers its own zoom level. Switching from one diagram to another restores the zoom you were using last time — stored in `localStorage` separately from the diagram data.
+
+#### Navigation
+
+- The ☰ button opens the diagram list panel — clicking a diagram name switches to it **and closes the panel automatically**
+- The `+ New` button creates a new diagram
+- The ← button in the top-right returns to the main dashboard
+
+#### Saving
+
+- Saves directly to `diagrammes.js` on disk via the File System Access API (same mechanism as notes and links)
+- The green **save** button appears in the toolbar whenever the in-memory data differs from the saved file
 
 ---
 

@@ -406,18 +406,30 @@ Clé IndexedDB : `"diagrammes"` (base `doc-survival-kit-db` / store `fileHandles
     "id": 1700000000000,
     "titre": "Nom du diagramme",
     "shapes": [
-      { "id": "s1", "type": "rect",    "x": 100, "y": 80,  "w": 120, "h": 50, "label": "Texte", "color": "t-sky" },
-      { "id": "s2", "type": "rounded", "x": 300, "y": 80,  "w": 120, "h": 50, "label": "Texte", "color": "t-green" },
-      { "id": "s3", "type": "db",      "x": 100, "y": 200, "w": 80,  "h": 60, "label": "DB",    "color": "t-violet" },
-      { "id": "s4", "type": "cloud",   "x": 300, "y": 200, "w": 100, "h": 60, "label": "API",   "color": "t-amber" },
-      { "id": "s5", "type": "text",    "x": 200, "y": 300, "w": 0,   "h": 0,  "label": "Note",  "color": "" }
+      {
+        "id": "s1", "type": "rect", "x": 100, "y": 80, "w": 120, "h": 50,
+        "text": "Texte", "color": "t-sky",
+        "fontSize": 12,
+        "textAlign": "center",
+        "textValign": "middle"
+      }
     ],
     "arrows": [
-      { "id": "a1", "src": "s1", "tgt": "s2", "label": "" }
+      { "id": "a1", "from": "s1", "to": "s2", "label": "" }
     ]
   }
 ]
 ```
+
+Champs optionnels de chaque forme (fallback si absent) :
+
+| Champ | Type | Défaut | Rôle |
+|---|---|---|---|
+| `fontSize` | `number` | `12` (`13` pour `text`) | Taille de police en px |
+| `textAlign` | `"left"` \| `"center"` \| `"right"` | `"center"` | Alignement horizontal du texte |
+| `textValign` | `"top"` \| `"middle"` \| `"bottom"` | `"middle"` | Alignement vertical du texte |
+
+Le zoom de chaque diagramme est persisté séparément dans `localStorage["diagrammes_zoom"]` (objet `{ [diagramId]: scale }`) pour ne pas polluer le diff de `mes_diagrammes`.
 
 ### Types de formes
 
@@ -425,26 +437,45 @@ Clé IndexedDB : `"diagrammes"` (base `doc-survival-kit-db` / store `fileHandles
 |---|---|---|
 | `rect` | Rectangle avec coins légèrement arrondis (`rx=4`) | 120 × 50 |
 | `rounded` | Rectangle très arrondi (`rx=22`) | 120 × 50 |
-| `db` | Cylindre (ellipse + corps + ellipse centrale) | 80 × 60 |
-| `cloud` | Ellipse en tirets | 100 × 60 |
+| `db` | Cylindre (ellipse cap + corps + ellipse bas) | 80 × 60 |
+| `cloud` | Ellipse en trait continu (service externe) | 100 × 60 |
 | `text` | Texte seul, sans fond | 0 × 0 |
+| `postit` | Post-it avec coin replié, texte multi-lignes | 130 × 110 |
 
-Toutes les formes ont : fond coloré (classe CSS du thème), trait `#a8a29e`, texte centré, 4 points de connexion (conn-dots), 1 poignée de redimensionnement (coin bas-droit).
+Toutes les formes sauf `postit` et `image` ont 4 points de connexion (conn-dots) et 1 poignée de redimensionnement (coin bas-droit).
+
+### Rendu du texte — word wrap
+
+Les types `rect`, `rounded`, `db`, `cloud` et `postit` utilisent `wrapPostitLines(text, maxWidth, fontSize)` pour découper le texte en lignes. Le padding latéral est :
+- `postit` : 14 px de chaque côté
+- `cloud` : 20 % de la largeur de chaque côté
+- `rect`, `rounded`, `db` : 12 px de chaque côté
+
+La hauteur de ligne est calculée dynamiquement : `lineH = Math.round(fontSize * 1.42)` (postit) ou `Math.round(fontSize * 1.33)` (autres).
+
+L'alignement vertical tient compte de la face haute du cylindre (`db`) : pour `textValign = "top"`, le texte commence après le cap (`ry * 2 + vpad`).
 
 ### Interactions
 
 | Action | Geste |
 |---|---|
 | Sélectionner / déplacer | Outil `select` + clic/drag sur une forme |
-| Créer une forme | Outil `rect`/`rounded`/`db`/`cloud`/`text` + clic sur le canvas |
+| Créer une forme | Outil `rect`/`rounded`/`db`/`cloud`/`text`/`postit` + clic sur le canvas |
 | Créer une flèche | Outil `arrow` + clic source → clic cible, **ou** drag depuis un conn-dot (tout outil) — la saisie du label s'ouvre automatiquement |
-| Éditer le texte d'une forme | Double-clic sur une forme **ou** bouton ✎ de la palette couleurs (forme sélectionnée) |
+| Éditer le texte d'une forme | Double-clic sur une forme **ou** bouton ✎ de la palette (forme sélectionnée) |
 | Éditer le label d'une flèche | Double-clic sur la flèche **ou** bouton ✎ (flèche sélectionnée) |
 | Changer la couleur | Palette couleurs (visible quand une forme est sélectionnée) |
+| Changer la taille de police | Boutons `Aa+` / `Aa−` de la palette |
+| Aligner le texte horizontalement | Boutons ← / ↔ / → de la palette |
+| Aligner le texte verticalement | Boutons haut / milieu / bas de la palette |
+| Copier la taille de police | Bouton goutte vide → clic sur la forme source |
+| Copier le style complet | Bouton goutte pleine → clic sur la forme source (copie `fontSize`, `color`, `type`, `w`, `h`, `textAlign`, `textValign`) |
 | Redimensionner | Drag de la poignée bas-droit (carré orange) |
 | Supprimer | Outil ✕ ou touche `Del` |
 | Pan | Drag sur le canvas vide (tout outil) |
 | Zoom | Molette souris (centré sur le curseur) ou boutons `−` / `+` / `⊡` |
+| Zoom persisté par diagramme | Chaque diagramme mémorise son niveau de zoom dans `localStorage["diagrammes_zoom"]` |
+| Fermer la barre latérale | Un clic sur un diagramme dans le panneau ☰ ferme automatiquement le panneau |
 
 ### Double-clic — implémentation
 
@@ -475,24 +506,33 @@ lastClickTime = now2; lastClickArrowId = aid;
 | Fonction | Rôle |
 |---|---|
 | `svgPoint(clientX, clientY)` | Convertit coordonnées écran → SVG (tient compte du pan/zoom) |
-| `renderShape(shape)` | Crée le groupe SVG d'une forme (fond, texte, conn-dots, resize grip) |
+| `renderShape(shape)` | Crée le groupe SVG d'une forme (fond, texte word-wrappé, conn-dots, resize grip) |
 | `renderArrow(arrow, shapes)` | Crée le groupe SVG d'une flèche (ligne + zone de clic + marqueur) |
+| `wrapPostitLines(text, maxWidth, fontSize)` | Découpe le texte en lignes selon la largeur disponible et la taille de police |
 | `getEdgePoint(shape, tx, ty)` | Calcule le point de sortie sur le bord d'une forme selon l'angle vers la cible |
 | `renderAll()` | Re-rendu complet du canvas SVG |
 | `shapeAt(x, y)` | Hit-test par bounding box — retourne la forme sous le curseur |
 | `arrowIdAt(x, y)` | Hit-test par distance au segment — retourne l'id de la flèche sous le curseur |
 | `setTool(name)` | Change l'outil actif, met à jour les classes CSS des boutons |
-| `setShapeColor(color)` | Applique une classe de thème à la forme sélectionnée |
+| `setShapeColor(color)` | Applique une classe de thème à la/les forme(s) sélectionnée(s) |
+| `changeShapeFontSize(delta)` | Incrémente / décrémente `fontSize` (clampé [8, 28]) sur les formes sélectionnées |
+| `setShapeTextAlign(align)` | Applique `textAlign` (`"left"` / `"center"` / `"right"`) aux formes sélectionnées |
+| `setShapeTextValign(valign)` | Applique `textValign` (`"top"` / `"middle"` / `"bottom"`) aux formes sélectionnées |
+| `startPickMode(mode)` | Active le mode pick (`"fontSize"` ou `"fullStyle"`) — curseur croix, bouton orange |
+| `cancelPickMode()` | Annule le mode pick et restaure le curseur |
+| `applyPickMode(srcShape)` | Copie les attributs de style de `srcShape` vers les formes cibles |
 | `deleteSelected()` | Supprime la forme ou la flèche sélectionnée |
-| `startTextEdit(shapeId)` | Positionne l'overlay `#shapeTextInput` sur la forme et lui donne le focus |
+| `startTextEdit(shapeId)` | Ouvre l'overlay d'édition : textarea pour `postit`/`rect`/`rounded`/`db`/`cloud`, input pour `text` |
 | `startArrowTextEdit(arrowId)` | Positionne l'overlay au milieu de la flèche pour éditer son label |
-| `confirmTextEdit()` | Sauvegarde le texte saisi (forme ou flèche selon `editingShapeId` / `editingArrowId`) et masque l'overlay |
-| `createArrow(fromId, toId)` | Crée une flèche et ouvre immédiatement `startArrowTextEdit` pour saisir le label |
+| `confirmTextEdit()` | Sauvegarde le texte saisi (forme ou flèche) et masque l'overlay |
+| `createArrow(fromId, toId)` | Crée une flèche et ouvre immédiatement `startArrowTextEdit` |
 | `creerDiagramme()` | Ajoute un nouveau diagramme vide et le sélectionne |
+| `selectDiagramme(idx)` | Sauvegarde le zoom courant, change de diagramme, restaure son zoom, ferme le panneau liste |
 | `toggleDiagramList()` | Affiche / masque le panneau liste des diagrammes |
 | `enregistrerDiagrammes()` | Sauvegarde dans `diagrammes.js` via File System Access API |
-| `zoomIn()` / `zoomOut()` / `resetZoom()` | Contrôle du zoom |
-| `onMouseDown(e)` | Gestionnaire principal : conn-dot drag, resize, sélection/déplacement, outil arrow, placement forme, détection double-clic |
+| `getZoomMap()` / `saveCurrentZoom()` / `restoreZoomForDiagram(idx)` | Persistance du zoom par diagramme dans `localStorage["diagrammes_zoom"]` |
+| `zoomIn()` / `zoomOut()` / `resetZoom()` | Contrôle du zoom (sauvegarde automatique dans `diagrammes_zoom`) |
+| `onMouseDown(e)` | Gestionnaire principal : pick mode, conn-dot drag, resize, sélection/déplacement, outil arrow, placement forme, double-clic |
 | `onMouseMove(e)` | Déplacement/redimensionnement en cours, pan, flèche temporaire |
 | `onMouseUp(e)` | Finalise drag, connexion flèche |
 | `onWheel(e)` | Zoom centré sur le curseur |
@@ -501,13 +541,16 @@ lastClickTime = now2; lastClickArrowId = aid;
 
 | Variable | Rôle |
 |---|---|
-| `currentTool` | Outil actif (`"select"`, `"rect"`, `"rounded"`, `"db"`, `"cloud"`, `"text"`, `"arrow"`) |
+| `currentTool` | Outil actif (`"select"`, `"rect"`, `"rounded"`, `"db"`, `"cloud"`, `"text"`, `"postit"`, `"arrow"`) |
 | `diagramsList` | Tableau des diagrammes en mémoire |
 | `currentDiagramIdx` | Index du diagramme affiché |
 | `viewTransform` | `{ x, y, scale }` — état du pan/zoom |
 | `selectedId` / `selectedType` | Id et type (`"shape"` ou `"arrow"`) de l'élément sélectionné |
+| `selectedIds` | Tableau des ids sélectionnés (multi-sélection) |
 | `dragState` | État du drag en cours (`null` ou objet de contexte) |
 | `arrowSrcId` | Id de la forme source lors du dessin d'une flèche (outil arrow) |
+| `pickMode` | Mode copie de style actif : `null` / `"fontSize"` / `"fullStyle"` |
+| `pickTargetIds` | `selectedIds` sauvegardés au déclenchement du pick mode |
 | `lastClickTime` / `lastClickShapeId` / `lastClickArrowId` | Détection du double-clic manuel (formes et flèches) |
 | `editingShapeId` / `editingArrowId` | Id de l'élément dont le texte est en cours d'édition |
 
