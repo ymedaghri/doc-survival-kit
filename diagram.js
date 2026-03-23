@@ -110,6 +110,24 @@ function checkDiffDiagrammes() {
   document.getElementById("btnSaveDiagram").style.display = diff ? "inline-flex" : "none";
 }
 
+// ── Zoom par diagramme ──
+function getZoomMap() {
+  try { return JSON.parse(localStorage.getItem("diagrammes_zoom") || "{}"); } catch(e) { return {}; }
+}
+function saveCurrentZoom() {
+  var diag = diagramsList[currentDiagramIdx];
+  if (!diag) return;
+  var map = getZoomMap();
+  map[diag.id] = viewTransform.scale;
+  localStorage.setItem("diagrammes_zoom", JSON.stringify(map));
+}
+function restoreZoomForDiagram(idx) {
+  var diag = diagramsList[idx];
+  if (!diag) return;
+  var map = getZoomMap();
+  viewTransform.scale = map[diag.id] !== undefined ? map[diag.id] : 1;
+}
+
 // ── File System Access API ──
 var IDB_KEY_DIAG = "diagrammes";
 var IDB_KEY_DIR  = "diagrammes_dir";
@@ -315,7 +333,7 @@ function updateViewport() {
 // ── Zoom ──
 function zoomIn()    { applyZoom(1.2, null, null); }
 function zoomOut()   { applyZoom(1 / 1.2, null, null); }
-function resetZoom() { viewTransform = { x: 60, y: 60, scale: 1 }; updateViewport(); }
+function resetZoom() { viewTransform = { x: 60, y: 60, scale: 1 }; updateViewport(); saveCurrentZoom(); }
 
 function applyZoom(factor, cx, cy) {
   var newScale = Math.min(4, Math.max(0.15, viewTransform.scale * factor));
@@ -325,6 +343,7 @@ function applyZoom(factor, cx, cy) {
   }
   viewTransform.scale = newScale;
   updateViewport();
+  saveCurrentZoom();
 }
 
 // ── Rendu des formes ──
@@ -630,11 +649,14 @@ function renderDiagramList() {
 
 // ── Gestion des diagrammes ──
 function selectDiagramme(idx) {
+  saveCurrentZoom();
   currentDiagramIdx = idx;
   localStorage.setItem("current_diagram_idx", idx);
   selectedId = null;  selectedType = null;
   selectedIds = [];
-  viewTransform = { x: 60, y: 60, scale: 1 };
+  restoreZoomForDiagram(idx);
+  viewTransform.x = 60;
+  viewTransform.y = 60;
   document.getElementById("colorPanel").style.display = "none";
   renderAll();
   document.getElementById("diagramListPanel").classList.remove("open");
