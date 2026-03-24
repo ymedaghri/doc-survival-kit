@@ -122,9 +122,15 @@ Text in `rect`, `rounded`, `db`, `cloud` and `postit` shapes wraps automatically
 
 Each diagram remembers its own zoom level. Switching from one diagram to another restores the zoom you were using last time — stored in `localStorage` separately from the diagram data.
 
+#### Lock per diagram
+
+The lock button (🔓/🔒) in the toolbar freezes the diagram: all canvas interactions (selection, tools, keyboard shortcuts) are disabled and any click simply pans the view. The lock state is saved per diagram in `localStorage` and restored when you switch back to it.
+
 #### Navigation
 
 - The ☰ button opens the diagram list panel — clicking a diagram name switches to it **and closes the panel automatically**
+- Diagram names **wrap to the next line** if they are too long — nothing is truncated
+- Diagrams can be **reordered by drag & drop** in the panel: grab the `⠿` handle on the left of any item, drag it up or down, and a dashed orange line shows exactly where it will land
 - The `+ New` button creates a new diagram
 - The ← button in the top-right returns to the main dashboard
 

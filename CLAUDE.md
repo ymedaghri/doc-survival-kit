@@ -431,6 +431,8 @@ Champs optionnels de chaque forme (fallback si absent) :
 
 Le zoom de chaque diagramme est persisté séparément dans `localStorage["diagrammes_zoom"]` (objet `{ [diagramId]: scale }`) pour ne pas polluer le diff de `mes_diagrammes`.
 
+Le verrouillage de chaque diagramme est persisté séparément dans `localStorage["diagrammes_lock"]` (objet `{ [diagramId]: boolean }`). Quand un diagramme est verrouillé, tout clic sur le canvas déclenche uniquement le pan global — aucune sélection, aucun outil, aucun raccourci clavier ne fonctionne sur le board.
+
 ### Types de formes
 
 | Type | Rendu SVG | Taille par défaut |
@@ -475,7 +477,9 @@ L'alignement vertical tient compte de la face haute du cylindre (`db`) : pour `t
 | Pan | Drag sur le canvas vide (tout outil) |
 | Zoom | Molette souris (centré sur le curseur) ou boutons `−` / `+` / `⊡` |
 | Zoom persisté par diagramme | Chaque diagramme mémorise son niveau de zoom dans `localStorage["diagrammes_zoom"]` |
+| Verrouiller / déverrouiller | Bouton cadenas (🔓/🔒) dans la barre d'outils — bloque toutes les interactions sur le canvas (sélection, outils, raccourcis) sauf le pan ; état persisté par diagramme dans `localStorage["diagrammes_lock"]` |
 | Fermer la barre latérale | Un clic sur un diagramme dans le panneau ☰ ferme automatiquement le panneau |
+| Réordonner les diagrammes | Drag & drop dans le panneau ☰ — poignée `⠿` à gauche de chaque item ; indicateur en pointillés (border-top si montée, border-bottom si descente) |
 
 ### Double-clic — implémentation
 
@@ -531,6 +535,15 @@ lastClickTime = now2; lastClickArrowId = aid;
 | `toggleDiagramList()` | Affiche / masque le panneau liste des diagrammes |
 | `enregistrerDiagrammes()` | Sauvegarde dans `diagrammes.js` via File System Access API |
 | `getZoomMap()` / `saveCurrentZoom()` / `restoreZoomForDiagram(idx)` | Persistance du zoom par diagramme dans `localStorage["diagrammes_zoom"]` |
+| `getLockMap()` / `saveCurrentLock()` / `restoreLockForDiagram(idx)` | Persistance du verrou par diagramme dans `localStorage["diagrammes_lock"]` |
+| `toggleBoardLock()` | Bascule le verrou, sauvegarde, désélectionne tout si verrouillé, met à jour le bouton |
+| `updateLockBtn()` | Met à jour l'icône et le titre du bouton `#btnLock` selon `boardLocked` |
+| `renderDiagramList()` | Rendu de la liste avec poignée drag `⠿`, attributs `draggable` et handlers drag & drop |
+| `onDiagDragStart(e, idx)` | Démarre le drag — mémorise `diagDragSrcIdx`, ajoute la classe `.dragging` |
+| `onDiagDragOver(e, idx)` | Affiche l'indicateur de drop (`.drag-over-before` si montée, `.drag-over-after` si descente) |
+| `onDiagDragLeave(e)` | Retire l'indicateur de drop |
+| `onDiagDrop(e, idx)` | Réordonne `diagramsList`, met à jour `currentDiagramIdx`, sauvegarde et re-rend |
+| `onDiagDragEnd()` | Nettoie les classes de drag |
 | `zoomIn()` / `zoomOut()` / `resetZoom()` | Contrôle du zoom (sauvegarde automatique dans `diagrammes_zoom`) |
 | `onMouseDown(e)` | Gestionnaire principal : pick mode, conn-dot drag, resize, sélection/déplacement, outil arrow, placement forme, double-clic |
 | `onMouseMove(e)` | Déplacement/redimensionnement en cours, pan, flèche temporaire |
@@ -553,6 +566,8 @@ lastClickTime = now2; lastClickArrowId = aid;
 | `pickTargetIds` | `selectedIds` sauvegardés au déclenchement du pick mode |
 | `lastClickTime` / `lastClickShapeId` / `lastClickArrowId` | Détection du double-clic manuel (formes et flèches) |
 | `editingShapeId` / `editingArrowId` | Id de l'élément dont le texte est en cours d'édition |
+| `boardLocked` | `true` si le diagramme courant est verrouillé (pan uniquement sur le canvas) |
+| `diagDragSrcIdx` | Index source pendant un drag & drop dans la liste des diagrammes |
 
 ---
 
