@@ -25,6 +25,7 @@ var lastClickShapeId = null;
 var lastClickArrowId = null;
 var editingArrowId = null;
 var boardLocked = false;
+var diagDragSrcIdx = null;
 
 // ── Palette ──
 var COLORS = {
@@ -711,7 +712,14 @@ function renderDiagramList() {
   el.innerHTML = diagramsList.map(function (d, i) {
     var active = i === currentDiagramIdx ? " active" : "";
     return (
-      '<div class="diagram-list-item' + active + '" onclick="selectDiagramme(' + i + ')">' +
+      '<div class="diagram-list-item' + active + '" draggable="true"' +
+      ' ondragstart="onDiagDragStart(event,' + i + ')"' +
+      ' ondragover="onDiagDragOver(event,' + i + ')"' +
+      ' ondragleave="onDiagDragLeave(event)"' +
+      ' ondrop="onDiagDrop(event,' + i + ')"' +
+      ' ondragend="onDiagDragEnd()"' +
+      ' onclick="selectDiagramme(' + i + ')">' +
+      '<span class="diagram-list-grip">⠿</span>' +
       '<span class="diagram-list-name">' + escDiag(d.titre) + '</span>' +
       (diagramsList.length > 1
         ? '<button class="diagram-list-del" onclick="event.stopPropagation();supprimerDiagramme(' + i + ')">×</button>'
@@ -719,6 +727,62 @@ function renderDiagramList() {
       "</div>"
     );
   }).join("");
+}
+
+function onDiagDragStart(e, idx) {
+  diagDragSrcIdx = idx;
+  e.dataTransfer.effectAllowed = "move";
+  e.currentTarget.classList.add("dragging");
+}
+
+function onDiagDragOver(e, idx) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  document.querySelectorAll(".diagram-list-item").forEach(function (el) {
+    el.classList.remove("drag-over-after", "drag-over-before");
+  });
+  if (idx !== diagDragSrcIdx) {
+    var goingDown = diagDragSrcIdx < idx;
+    e.currentTarget.classList.add(goingDown ? "drag-over-after" : "drag-over-before");
+  }
+}
+
+function onDiagDragLeave(e) {
+  e.currentTarget.classList.remove("drag-over-after", "drag-over-before");
+}
+
+function onDiagDrop(e, idx) {
+  e.preventDefault();
+  if (diagDragSrcIdx === null || diagDragSrcIdx === idx) {
+    onDiagDragEnd();
+    return;
+  }
+  var src = diagDragSrcIdx;
+  var item = diagramsList.splice(src, 1)[0];
+
+  // insertAt = idx dans les deux cas :
+  // - descente (src < idx) : après remove, la cible est à idx-1, on insère à idx = après elle ✓
+  // - montée  (src > idx) : après remove, la cible est toujours à idx, on insère à idx = avant elle ✓
+  diagramsList.splice(idx, 0, item);
+
+  var cur = currentDiagramIdx;
+  if (cur === src) {
+    currentDiagramIdx = idx;
+  } else {
+    var adjustedCur = cur > src ? cur - 1 : cur;
+    currentDiagramIdx = adjustedCur >= idx ? adjustedCur + 1 : adjustedCur;
+  }
+  localStorage.setItem("current_diagram_idx", currentDiagramIdx);
+  diagDragSrcIdx = null;
+  saveDiagrammes();
+  renderDiagramList();
+}
+
+function onDiagDragEnd() {
+  diagDragSrcIdx = null;
+  document.querySelectorAll(".diagram-list-item").forEach(function (el) {
+    el.classList.remove("dragging", "drag-over-after", "drag-over-before");
+  });
 }
 
 // ── Gestion des diagrammes ──

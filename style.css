@@ -1277,11 +1277,13 @@ section.collapsed .links {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
   padding: 8px 10px;
   border-radius: 7px;
   cursor: pointer;
   margin-bottom: 2px;
   transition: background 0.1s;
+  border-bottom: 2px solid transparent;
 }
 .diagram-list-item:hover {
   background: #f5f5f4;
@@ -1289,13 +1291,33 @@ section.collapsed .links {
 .diagram-list-item.active {
   background: #fff7ed;
 }
+.diagram-list-item.dragging {
+  opacity: 0.4;
+}
+.diagram-list-item.drag-over-after {
+  border-bottom: 2px dashed #f97316;
+  background: #fff7ed;
+}
+.diagram-list-item.drag-over-before {
+  border-top: 2px dashed #f97316;
+  background: #fff7ed;
+}
+.diagram-list-grip {
+  font-size: 0.85rem;
+  color: #c7c3bf;
+  cursor: grab;
+  flex-shrink: 0;
+  user-select: none;
+  line-height: 1;
+}
+.diagram-list-grip:active {
+  cursor: grabbing;
+}
 .diagram-list-name {
   font-size: 0.8rem;
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: #292524;
+  word-break: break-word;
 }
 .diagram-list-del {
   opacity: 0;
