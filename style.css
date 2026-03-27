@@ -990,6 +990,7 @@ section.collapsed .links {
 }
 .note-content table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.8rem;
 }
@@ -999,6 +1000,8 @@ section.collapsed .links {
   border: 1px solid #e7e5e4;
   text-align: left;
   vertical-align: top;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .note-content table th {
   font-family: "Cascadia Code", "SF Mono", "Consolas", monospace;

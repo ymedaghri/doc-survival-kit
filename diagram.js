@@ -18,6 +18,7 @@ var dragState = null;
 var panStart = null;
 var arrowSrcId = null;
 var editingShapeId = null;
+var editingTableCell = null;  // { row, col } | null
 var pickMode = null;          // "fontSize" | "fullStyle" | null
 var pickTargetIds = [];       // selectedIds sauvegardés pendant le pick
 var lastClickTime = 0;
@@ -26,6 +27,26 @@ var lastClickArrowId = null;
 var editingArrowId = null;
 var boardLocked = false;
 var diagDragSrcIdx = null;
+var historyStack = [];
+var MAX_HISTORY = 50;
+
+// ── Helpers tableau ──
+function getColWidths(shape) {
+  var cols = shape.cols || 3;
+  if (shape.colWidths && shape.colWidths.length === cols) return shape.colWidths;
+  var w = shape.w / cols;
+  var result = [];
+  for (var i = 0; i < cols; i++) result.push(w);
+  return result;
+}
+
+// xOffsets[i] = x du début de la colonne i (relatif à shape.x)
+function getColOffsets(shape) {
+  var cw = getColWidths(shape);
+  var offsets = [0];
+  for (var i = 0; i < cw.length - 1; i++) offsets.push(offsets[i] + cw[i]);
+  return offsets;
+}
 
 // ── Palette ──
 var COLORS = {
@@ -43,8 +64,11 @@ var DEFAULT_SIZES = {
   rounded: { w: 130, h: 50 },
   db:      { w: 100, h: 65 },
   cloud:   { w: 110, h: 65 },
+  nuage:   { w: 121, h: 96 },
   text:    { w: 110, h: 34 },
   postit:  { w: 130, h: 110 },
+  actor:   { w: 60,  h: 90 },
+  table:   { w: 210, h: 120 },
 };
 
 // ── Helpers ──
@@ -78,6 +102,22 @@ function wrapPostitLines(text, maxWidth, fontSize) {
     var words = line.split(" ");
     var current = "";
     words.forEach(function (word) {
+      // Si le mot seul dépasse maxWidth, le couper caractère par caractère
+      if (measureText(word, fs, "600") > maxWidth) {
+        if (current !== "") { result.push(current); current = ""; }
+        var chunk = "";
+        for (var ci = 0; ci < word.length; ci++) {
+          var chunkTest = chunk + word[ci];
+          if (measureText(chunkTest, fs, "600") > maxWidth) {
+            if (chunk !== "") result.push(chunk);
+            chunk = word[ci];
+          } else {
+            chunk = chunkTest;
+          }
+        }
+        current = chunk;
+        return;
+      }
       var test = current ? current + " " + word : word;
       if (current && measureText(test, fs, "600") > maxWidth) {
         result.push(current);
@@ -107,6 +147,20 @@ function loadDiagrammes() {
 function saveDiagrammes() {
   localStorage.setItem("mes_diagrammes", JSON.stringify(diagramsList));
   checkDiffDiagrammes();
+}
+
+function pushHistory() {
+  historyStack.push(JSON.stringify(diagramsList));
+  if (historyStack.length > MAX_HISTORY) historyStack.shift();
+}
+
+function undoAction() {
+  if (historyStack.length === 0) return;
+  diagramsList = JSON.parse(historyStack.pop());
+  if (currentDiagramIdx >= diagramsList.length) currentDiagramIdx = diagramsList.length - 1;
+  saveDiagrammes();
+  renderAll();
+  renderDiagramList();
 }
 
 function checkDiffDiagrammes() {
@@ -372,6 +426,7 @@ function updateViewport() {
   );
   document.getElementById("zoomLevel").textContent =
     Math.round(viewTransform.scale * 100) + "%";
+  updateTableOverlay();
 }
 
 // ── Zoom ──
@@ -439,7 +494,7 @@ function renderShape(shape) {
     g.appendChild(topEl);
 
   } else if (shape.type === "cloud") {
-    // Ellipse à bordure pointillée = service externe / cloud
+    // Ellipse en trait continu = service externe / cloud
     var el = createSVGEl("ellipse");
     el.setAttribute("cx", shape.x + shape.w / 2);
     el.setAttribute("cy", shape.y + shape.h / 2);
@@ -449,6 +504,211 @@ function renderShape(shape) {
     el.setAttribute("stroke", stroke);
     el.setAttribute("stroke-width", sw);
     g.appendChild(el);
+
+  } else if (shape.type === "nuage") {
+    // Nuage — contour extérieur du Bootstrap cloud icon (viewBox 0 0 16 16)
+    // Le path se referme exactement : endpoint = startpoint, Z explicite
+    var nuageG = createSVGEl("g");
+    nuageG.setAttribute("transform",
+      "translate(" + shape.x + "," + shape.y + ") scale(" + (shape.w / 16) + "," + (shape.h / 16) + ")"
+    );
+    var nuagePathEl = createSVGEl("path");
+    nuagePathEl.setAttribute("d",
+      "M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579" +
+      "C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13" +
+      "H3.781C1.708 13 0 11.366 0 9.318" +
+      "c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383Z"
+    );
+    nuagePathEl.setAttribute("fill", c.fill);
+    nuagePathEl.setAttribute("stroke", stroke);
+    nuagePathEl.setAttribute("stroke-width", sw);
+    nuagePathEl.setAttribute("vector-effect", "non-scaling-stroke");
+    nuageG.appendChild(nuagePathEl);
+    g.appendChild(nuageG);
+
+  } else if (shape.type === "actor") {
+    // Bonhomme UML (stick figure) — pas de fond, juste les traits
+    var acx = shape.x + shape.w / 2;
+    var aHeadR = Math.min(shape.w * 0.20, shape.h * 0.14);
+    var aHeadCY = shape.y + aHeadR + shape.h * 0.02;
+    // Tête
+    var aHead = createSVGEl("circle");
+    aHead.setAttribute("cx", acx);
+    aHead.setAttribute("cy", aHeadCY);
+    aHead.setAttribute("r", aHeadR);
+    aHead.setAttribute("fill", c.fill);
+    aHead.setAttribute("stroke", stroke);
+    aHead.setAttribute("stroke-width", sw);
+    g.appendChild(aHead);
+    // Corps
+    var aBodyTop = aHeadCY + aHeadR;
+    var aBodyBot = shape.y + shape.h * 0.60;
+    var aBody = createSVGEl("line");
+    aBody.setAttribute("x1", acx); aBody.setAttribute("y1", aBodyTop);
+    aBody.setAttribute("x2", acx); aBody.setAttribute("y2", aBodyBot);
+    aBody.setAttribute("stroke", stroke); aBody.setAttribute("stroke-width", sw);
+    aBody.setAttribute("stroke-linecap", "round");
+    g.appendChild(aBody);
+    // Bras
+    var aArmY = shape.y + shape.h * 0.38;
+    var aArmLX = shape.x + shape.w * 0.10;
+    var aArmRX = shape.x + shape.w * 0.90;
+    var aArms = createSVGEl("line");
+    aArms.setAttribute("x1", aArmLX); aArms.setAttribute("y1", aArmY);
+    aArms.setAttribute("x2", aArmRX); aArms.setAttribute("y2", aArmY);
+    aArms.setAttribute("stroke", stroke); aArms.setAttribute("stroke-width", sw);
+    aArms.setAttribute("stroke-linecap", "round");
+    g.appendChild(aArms);
+    // Jambe gauche
+    var aLegLX = shape.x + shape.w * 0.18;
+    var aLegRX = shape.x + shape.w * 0.82;
+    var aLegBotY = shape.y + shape.h * 0.82;
+    var aLegL = createSVGEl("line");
+    aLegL.setAttribute("x1", acx); aLegL.setAttribute("y1", aBodyBot);
+    aLegL.setAttribute("x2", aLegLX); aLegL.setAttribute("y2", aLegBotY);
+    aLegL.setAttribute("stroke", stroke); aLegL.setAttribute("stroke-width", sw);
+    aLegL.setAttribute("stroke-linecap", "round");
+    g.appendChild(aLegL);
+    // Jambe droite
+    var aLegR = createSVGEl("line");
+    aLegR.setAttribute("x1", acx); aLegR.setAttribute("y1", aBodyBot);
+    aLegR.setAttribute("x2", aLegRX); aLegR.setAttribute("y2", aLegBotY);
+    aLegR.setAttribute("stroke", stroke); aLegR.setAttribute("stroke-width", sw);
+    aLegR.setAttribute("stroke-linecap", "round");
+    g.appendChild(aLegR);
+
+  } else if (shape.type === "table") {
+    var tRows = shape.rows || 3;
+    var tCols = shape.cols || 3;
+    var tCells = shape.cells || [];
+    var tColWidths = getColWidths(shape);
+    var tColOffsets = getColOffsets(shape);
+    var cellH = shape.h / tRows;
+    var tfs = shape.fontSize || 12;
+    // Fond
+    var tBg = createSVGEl("rect");
+    tBg.setAttribute("x", shape.x);      tBg.setAttribute("y", shape.y);
+    tBg.setAttribute("width", shape.w);  tBg.setAttribute("height", shape.h);
+    tBg.setAttribute("rx", 3);
+    tBg.setAttribute("fill", c.fill);    tBg.setAttribute("stroke", stroke);
+    tBg.setAttribute("stroke-width", sw);
+    g.appendChild(tBg);
+    // Lignes horizontales internes
+    for (var tri = 1; tri < tRows; tri++) {
+      var thl = createSVGEl("line");
+      thl.setAttribute("x1", shape.x);            thl.setAttribute("y1", shape.y + tri * cellH);
+      thl.setAttribute("x2", shape.x + shape.w);  thl.setAttribute("y2", shape.y + tri * cellH);
+      thl.setAttribute("stroke", stroke);          thl.setAttribute("stroke-width", sw * 0.5);
+      g.appendChild(thl);
+    }
+    // Lignes verticales internes
+    for (var tci = 1; tci < tCols; tci++) {
+      var tvl = createSVGEl("line");
+      var tvlX = shape.x + tColOffsets[tci];
+      tvl.setAttribute("x1", tvlX);  tvl.setAttribute("y1", shape.y);
+      tvl.setAttribute("x2", tvlX);  tvl.setAttribute("y2", shape.y + shape.h);
+      tvl.setAttribute("stroke", stroke);  tvl.setAttribute("stroke-width", sw * 0.5);
+      g.appendChild(tvl);
+    }
+    // Textes des cellules avec word wrap
+    var clineH = Math.round(tfs * 1.33);
+    for (var tri2 = 0; tri2 < tRows; tri2++) {
+      for (var tci2 = 0; tci2 < tCols; tci2++) {
+        var cellVal = (tCells[tri2] && tCells[tri2][tci2]) || "";
+        if (!cellVal) continue;
+        var cellW2 = tColWidths[tci2];
+        var cpad = 6;
+        var clines = wrapPostitLines(cellVal, cellW2 - cpad * 2, tfs);
+        var cCenterY = shape.y + tri2 * cellH + cellH / 2;
+        var cfirstY = cCenterY - clines.length * clineH / 2 + clineH * 0.5 + tfs * 0.5;
+        var cellCenterX = shape.x + tColOffsets[tci2] + cellW2 / 2;
+        var ctxt = createSVGEl("text");
+        ctxt.setAttribute("x", cellCenterX);
+        ctxt.setAttribute("y", cfirstY);
+        ctxt.setAttribute("text-anchor", "middle");
+        ctxt.setAttribute("fill", c.text);
+        ctxt.setAttribute("font-size", tfs);
+        ctxt.setAttribute("data-cell", tri2 + "-" + tci2);
+        ctxt.setAttribute("font-family", '"Segoe UI",system-ui,sans-serif');
+        ctxt.setAttribute("font-weight", "600");
+        ctxt.setAttribute("pointer-events", "none");
+        (function(cx, lines) {
+          lines.forEach(function(line, i) {
+            var ts = createSVGEl("tspan");
+            ts.setAttribute("x", cx);
+            if (i > 0) ts.setAttribute("dy", clineH + "px");
+            ts.textContent = line || " ";
+            ctxt.appendChild(ts);
+          });
+        })(cellCenterX, clines);
+        g.appendChild(ctxt);
+      }
+    }
+    // Poignées de redimensionnement des colonnes (chevrons au-dessus de chaque séparateur)
+    if (isSel && selectedIds.length === 1) {
+      for (var tsi = 1; tsi < tCols; tsi++) {
+        var hx = shape.x + tColOffsets[tsi];
+        var hy = shape.y - 13;
+        var hg = createSVGEl("g");
+        hg.setAttribute("data-col-sep", tsi - 1);
+        hg.setAttribute("data-shape-id", shape.id);
+        hg.style.cursor = "col-resize";
+        // Zone de clic transparente
+        var hArea = createSVGEl("rect");
+        hArea.setAttribute("x", hx - 9);  hArea.setAttribute("y", hy - 7);
+        hArea.setAttribute("width", 18);   hArea.setAttribute("height", 22);
+        hArea.setAttribute("fill", "transparent");
+        hArea.setAttribute("data-col-sep", tsi - 1);
+        hArea.setAttribute("data-shape-id", shape.id);
+        hg.appendChild(hArea);
+        // Chevron ∨
+        var chev = createSVGEl("path");
+        chev.setAttribute("d", "M" + (hx - 5) + "," + (hy - 1) + " L" + hx + "," + (hy + 5) + " L" + (hx + 5) + "," + (hy - 1));
+        chev.setAttribute("fill", "none");
+        chev.setAttribute("stroke", "#f97316");
+        chev.setAttribute("stroke-width", "1.8");
+        chev.setAttribute("stroke-linecap", "round");
+        chev.setAttribute("stroke-linejoin", "round");
+        chev.setAttribute("pointer-events", "none");
+        hg.appendChild(chev);
+        // Trait pointillé vers la table
+        var hvl = createSVGEl("line");
+        hvl.setAttribute("x1", hx);  hvl.setAttribute("y1", hy + 5);
+        hvl.setAttribute("x2", hx);  hvl.setAttribute("y2", shape.y);
+        hvl.setAttribute("stroke", "#f97316");
+        hvl.setAttribute("stroke-width", "1");
+        hvl.setAttribute("stroke-dasharray", "3,2");
+        hvl.setAttribute("pointer-events", "none");
+        hg.appendChild(hvl);
+        g.appendChild(hg);
+      }
+    }
+    // Poignée de redimensionnement
+    if (isSel && selectedIds.length === 1) {
+      var tGrip = createSVGEl("rect");
+      tGrip.setAttribute("x", shape.x + shape.w - 5);  tGrip.setAttribute("y", shape.y + shape.h - 5);
+      tGrip.setAttribute("width", 10);  tGrip.setAttribute("height", 10);
+      tGrip.setAttribute("rx", 2);
+      tGrip.setAttribute("fill", "#f97316");
+      tGrip.setAttribute("stroke", "#fff");  tGrip.setAttribute("stroke-width", 1.5);
+      tGrip.classList.add("resize-grip");
+      tGrip.setAttribute("data-shape-id", shape.id);
+      g.appendChild(tGrip);
+    }
+    // Points de connexion
+    var thcx = shape.x + shape.w / 2, thcy = shape.y + shape.h / 2;
+    [[thcx, shape.y], [thcx, shape.y + shape.h], [shape.x, thcy], [shape.x + shape.w, thcy]]
+      .forEach(function (pt) {
+        var tdot = createSVGEl("circle");
+        tdot.setAttribute("cx", pt[0]);  tdot.setAttribute("cy", pt[1]);
+        tdot.setAttribute("r", 5);
+        tdot.setAttribute("fill", "#f97316");
+        tdot.setAttribute("stroke", "#fff");  tdot.setAttribute("stroke-width", 1.5);
+        tdot.classList.add("conn-dot");
+        tdot.setAttribute("data-shape-id", shape.id);
+        g.appendChild(tdot);
+      });
+    return g;
 
   } else if (shape.type === "postit") {
     var fold = 18;
@@ -505,7 +765,9 @@ function renderShape(shape) {
   // ── Texte ──
   var textCy = shape.type === "db"
     ? shape.y + shape.h * 0.62
-    : shape.y + shape.h / 2;
+    : shape.type === "actor"
+      ? shape.y + shape.h - 2
+      : shape.y + shape.h / 2;
   var ta = shape.textAlign || "center";
   var textAnchor = ta === "left" ? "start" : ta === "right" ? "end" : "middle";
   var txt = createSVGEl("text");
@@ -539,12 +801,30 @@ function renderShape(shape) {
       ts.textContent = line || " ";
       txt.appendChild(ts);
     });
-  } else if (shape.type === "rect" || shape.type === "rounded" || shape.type === "db" || shape.type === "cloud") {
-    var wpad = shape.type === "cloud" ? Math.round(shape.w * 0.2) : 12;
-    var wvpad = shape.type === "cloud" ? Math.round(shape.h * 0.12) : 8;
+  } else if (shape.type === "actor") {
+    var alines = wrapPostitLines(shape.text || "", shape.w * 1.2, fs);
+    var alineH = Math.round(fs * 1.33);
+    txt.setAttribute("text-anchor", "middle");
+    txt.removeAttribute("dominant-baseline");
+    alines.forEach(function (line, i) {
+      var ts = createSVGEl("tspan");
+      ts.setAttribute("x", shape.x + shape.w / 2);
+      if (i > 0) ts.setAttribute("dy", alineH + "px");
+      ts.textContent = line || " ";
+      txt.appendChild(ts);
+    });
+  } else if (shape.type === "rect" || shape.type === "rounded" || shape.type === "db" || shape.type === "cloud" || shape.type === "nuage") {
+    var wpad = shape.type === "cloud" ? Math.round(shape.w * 0.2) : shape.type === "nuage" ? Math.round(shape.w * 0.12) : 12;
+    // Pour nuage : vpad = offset depuis le haut visible (y=2/16) + marge interne
+    var wvpad = shape.type === "cloud" ? Math.round(shape.h * 0.12)
+      : shape.type === "nuage" ? Math.round(shape.h * 2 / 16) + 6
+      : 8;
     var wlines = wrapPostitLines(shape.text || "", shape.w - wpad * 2, fs);
     var wlineH = Math.round(fs * 1.33);
-    var wcenterY = shape.type === "db" ? shape.y + shape.h * 0.62 : shape.y + shape.h / 2;
+    // Pour nuage : centre de la forme visible = milieu entre y=2/16 et y=13/16
+    var wcenterY = shape.type === "db" ? shape.y + shape.h * 0.62
+      : shape.type === "nuage" ? shape.y + shape.h * ((2 + 13) / 2 / 16)
+      : shape.y + shape.h / 2;
     var dbCapH = shape.type === "db" ? Math.min(12, shape.h * 0.2) * 2 : 0;
     var wfirstY = tv === "top"
       ? shape.y + dbCapH + wvpad + wlineH * 0.5
@@ -705,6 +985,8 @@ function renderAll() {
 
   updateViewport();
   renderDiagramList();
+  syncColorPanel();
+  updateTableOverlay();
 }
 
 function renderDiagramList() {
@@ -837,6 +1119,7 @@ function annulerNouveauDiagramme() {
 
 function supprimerDiagramme(idx) {
   if (diagramsList.length <= 1) return;
+  pushHistory();
   diagramsList.splice(idx, 1);
   if (currentDiagramIdx >= diagramsList.length) currentDiagramIdx = diagramsList.length - 1;
   localStorage.setItem("current_diagram_idx", currentDiagramIdx);
@@ -873,9 +1156,9 @@ function setTool(tool) {
 
 // ── Ajout d'une forme ──
 function addShape(type, x, y) {
+  pushHistory();
   var diag = getCurrentDiagram();
   var size = DEFAULT_SIZES[type] || { w: 120, h: 50 };
-  var labels = { db: "Database", cloud: "Cloud", text: "Label", postit: "" };
   var shape = {
     id: "s" + Date.now(),
     type: type,
@@ -883,21 +1166,30 @@ function addShape(type, x, y) {
     y: Math.round(y - size.h / 2),
     w: size.w,
     h: size.h,
-    text: type in labels ? labels[type] : "Service",
+    text: "",
     color: type === "postit" ? "t-amber" : DEFAULT_COLOR,
   };
+  if (type === "table") {
+    shape.rows = 3; shape.cols = 3;
+    shape.cells = [["","",""],["","",""],["","",""]];
+    var initW = shape.w / 3;
+    shape.colWidths = [initW, initW, initW];
+  }
   diag.shapes.push(shape);
   saveDiagrammes();
   selectedId = shape.id;  selectedType = "shape";
   selectedIds = [shape.id];
   renderAll();
   document.getElementById("colorPanel").style.display = "flex";
-  startTextEdit(shape.id);
+  syncColorPanel();
+  if (type !== "table") startTextEdit(shape.id);
 }
 
 // ── Suppression ──
 function deleteSelected() {
   var diag = getCurrentDiagram();
+  if (selectedIds.length === 0 && !(selectedId && selectedType === "arrow")) return;
+  pushHistory();
   if (selectedIds.length > 0) {
     diag.shapes = diag.shapes.filter(function (s) { return selectedIds.indexOf(s.id) === -1; });
     diag.arrows = diag.arrows.filter(function (a) {
@@ -919,6 +1211,7 @@ function deleteSelected() {
 // ── Couleur ──
 function setShapeColor(color) {
   if (selectedIds.length === 0) return;
+  pushHistory();
   var diag = getCurrentDiagram();
   selectedIds.forEach(function (id) {
     var shape = diag.shapes.find(function (s) { return s.id === id; });
@@ -931,6 +1224,7 @@ function setShapeColor(color) {
 
 function setShapeTextValign(valign) {
   if (selectedIds.length === 0) return;
+  pushHistory();
   var diag = getCurrentDiagram();
   selectedIds.forEach(function (id) {
     var shape = diag.shapes.find(function (s) { return s.id === id; });
@@ -943,6 +1237,7 @@ function setShapeTextValign(valign) {
 
 function setShapeTextAlign(align) {
   if (selectedIds.length === 0) return;
+  pushHistory();
   var diag = getCurrentDiagram();
   selectedIds.forEach(function (id) {
     var shape = diag.shapes.find(function (s) { return s.id === id; });
@@ -955,6 +1250,7 @@ function setShapeTextAlign(align) {
 
 function changeShapeFontSize(delta) {
   if (selectedIds.length === 0) return;
+  pushHistory();
   var diag = getCurrentDiagram();
   selectedIds.forEach(function (id) {
     var shape = diag.shapes.find(function (s) { return s.id === id; });
@@ -985,6 +1281,7 @@ function cancelPickMode() {
 }
 
 function applyPickMode(srcShape) {
+  pushHistory();
   var diag = getCurrentDiagram();
   pickTargetIds.forEach(function (id) {
     if (id === srcShape.id) return;
@@ -1013,6 +1310,7 @@ function startTextEdit(shapeId) {
   var diag = getCurrentDiagram();
   var shape = diag.shapes.find(function (s) { return s.id === shapeId; });
   if (!shape || shape.type === "image") return;
+  if (shape.type === "table") return;
   editingShapeId = shapeId;
 
   var svg = document.getElementById("canvas");
@@ -1023,15 +1321,21 @@ function startTextEdit(shapeId) {
   var sh = shape.h * viewTransform.scale;
   var c = COLORS[shape.color] || COLORS[DEFAULT_COLOR];
 
-  var useTextarea = shape.type === "postit" || shape.type === "rect" || shape.type === "rounded" || shape.type === "db" || shape.type === "cloud";
+  var useTextarea = shape.type === "postit" || shape.type === "rect" || shape.type === "rounded" || shape.type === "db" || shape.type === "cloud" || shape.type === "nuage";
   if (useTextarea) {
     var ta = document.getElementById("postitTextInput");
     ta.value = shape.text || "";
-    var hpad = shape.type === "cloud" ? Math.round(sw * 0.15) : 8;
+    var hpad = shape.type === "cloud" ? Math.round(sw * 0.15) : shape.type === "nuage" ? Math.round(sw * 0.14) : 8;
     var vtop, vheight;
     if (shape.type === "cloud") {
       vtop    = sy + Math.round(sh * 0.12);
       vheight = sh - Math.round(sh * 0.12) * 2;
+    } else if (shape.type === "nuage") {
+      // Le nuage Bootstrap : haut visible ≈ y=2/16, bas de la zone texte ≈ y=10/16
+      var nuageTop = Math.round(sh * 2 / 16);
+      var nuageBot = Math.round(sh * 10 / 16);
+      vtop    = sy + nuageTop;
+      vheight = nuageBot - nuageTop - 4;
     } else if (shape.type === "db") {
       var dbRy = Math.min(12, shape.h * 0.2) * viewTransform.scale;
       vtop    = sy + dbRy * 2 + 4;
@@ -1057,9 +1361,15 @@ function startTextEdit(shapeId) {
   } else {
     var input = document.getElementById("shapeTextInput");
     input.value = shape.text || "";
-    input.style.left   = (sx + sw * 0.08) + "px";
-    input.style.top    = (sy + sh * 0.22) + "px";
-    input.style.width  = (sw * 0.84) + "px";
+    if (shape.type === "actor") {
+      input.style.left  = sx + "px";
+      input.style.top   = (sy + sh * 0.84) + "px";
+      input.style.width = sw + "px";
+    } else {
+      input.style.left  = (sx + sw * 0.08) + "px";
+      input.style.top   = (sy + sh * 0.22) + "px";
+      input.style.width = (sw * 0.84) + "px";
+    }
     var editFs2 = shape.fontSize || 13;
     input.style.fontSize   = Math.max(10, editFs2 * viewTransform.scale) + "px";
     input.style.color      = c.text;
@@ -1076,24 +1386,181 @@ function confirmTextEdit() {
   if (editingShapeId) {
     var shape = diag.shapes.find(function (s) { return s.id === editingShapeId; });
     if (shape) {
-      var usesTextarea = shape.type === "postit" || shape.type === "rect" || shape.type === "rounded" || shape.type === "db" || shape.type === "cloud";
-      var val = usesTextarea
-        ? document.getElementById("postitTextInput").value
-        : input.value;
-      shape.text = val;
+      if (shape.type === "table" && editingTableCell !== null) {
+        var tval = document.getElementById("postitTextInput").value;
+        var oldCellVal = (shape.cells && shape.cells[editingTableCell.row] && shape.cells[editingTableCell.row][editingTableCell.col]) || "";
+        if (tval !== oldCellVal) pushHistory();
+        if (!shape.cells) shape.cells = [];
+        while (shape.cells.length <= editingTableCell.row) shape.cells.push([]);
+        shape.cells[editingTableCell.row][editingTableCell.col] = tval;
+        editingTableCell = null;
+      } else {
+        var usesTextarea = shape.type === "postit" || shape.type === "rect" || shape.type === "rounded" || shape.type === "db" || shape.type === "cloud" || shape.type === "nuage";
+        var val = usesTextarea
+          ? document.getElementById("postitTextInput").value
+          : input.value;
+        if (val !== (shape.text || "")) pushHistory();
+        shape.text = val;
+      }
       saveDiagrammes();
       renderAll();
     }
     editingShapeId = null;
   } else if (editingArrowId) {
     var arrow = (diag.arrows || []).find(function (a) { return a.id === editingArrowId; });
-    if (arrow) { arrow.label = input.value; saveDiagrammes(); renderAll(); }
+    if (arrow) {
+      if (input.value !== (arrow.label || "")) pushHistory();
+      arrow.label = input.value; saveDiagrammes(); renderAll();
+    }
     editingArrowId = null;
   }
   document.getElementById("textOverlay").style.display = "none";
   document.getElementById("postitTextInput").style.display = "none";
   document.getElementById("shapeTextInput").style.display = "block";
 }
+
+function startTableCellEdit(shapeId, row, col) {
+  var diag = getCurrentDiagram();
+  var shape = diag.shapes.find(function (s) { return s.id === shapeId; });
+  if (!shape) return;
+  editingShapeId = shapeId;
+  editingTableCell = { row: row, col: col };
+
+  var tRows = shape.rows || 3;
+  var scColWidths = getColWidths(shape);
+  var scColOffsets = getColOffsets(shape);
+  var cellW = scColWidths[col], cellH = shape.h / tRows;
+  var cellX = shape.x + scColOffsets[col], cellY = shape.y + row * cellH;
+
+  var svgEl = document.getElementById("canvas");
+  var sr = svgEl.getBoundingClientRect();
+  var csx = cellX * viewTransform.scale + viewTransform.x + sr.left;
+  var csy = cellY * viewTransform.scale + viewTransform.y + sr.top;
+  var csw = cellW * viewTransform.scale, csh = cellH * viewTransform.scale;
+  var cc = COLORS[shape.color] || COLORS[DEFAULT_COLOR];
+
+  var ta = document.getElementById("postitTextInput");
+  ta.value = (shape.cells && shape.cells[row] && shape.cells[row][col]) || "";
+  ta.style.left   = (csx + 2) + "px";
+  ta.style.top    = (csy + 2) + "px";
+  ta.style.width  = (csw - 4) + "px";
+  ta.style.height = (csh - 4) + "px";
+  var tfs = shape.fontSize || 12;
+  ta.style.fontSize = Math.max(10, tfs * viewTransform.scale) + "px";
+  ta.style.color  = cc.text;
+  ta.style.display = "block";
+  document.getElementById("shapeTextInput").style.display = "none";
+  document.getElementById("textOverlay").style.display = "block";
+  var sg = document.querySelector('#shapesLayer [data-id="' + shapeId + '"]');
+  if (sg) { var cellTx = sg.querySelector('text[data-cell="' + row + '-' + col + '"]'); if (cellTx) cellTx.style.visibility = "hidden"; }
+  setTimeout(function () { ta.focus(); ta.select(); }, 10);
+}
+
+function addTableRow() {
+  var diag = getCurrentDiagram();
+  var shape = selectedIds.length === 1 ? diag.shapes.find(function (s) { return s.id === selectedIds[0]; }) : null;
+  if (!shape || shape.type !== "table") return;
+  pushHistory();
+  shape.rows = (shape.rows || 3) + 1;
+  if (!shape.cells) shape.cells = [];
+  while (shape.cells.length < shape.rows) shape.cells.push([]);
+  shape.cells[shape.rows - 1] = new Array(shape.cols || 3).fill("");
+  saveDiagrammes(); renderAll();
+  document.getElementById("colorPanel").style.display = "flex";
+  syncColorPanel();
+}
+
+function removeTableRow() {
+  var diag = getCurrentDiagram();
+  var shape = selectedIds.length === 1 ? diag.shapes.find(function (s) { return s.id === selectedIds[0]; }) : null;
+  if (!shape || shape.type !== "table" || (shape.rows || 3) <= 1) return;
+  pushHistory();
+  shape.rows = (shape.rows || 3) - 1;
+  if (shape.cells && shape.cells.length > shape.rows) shape.cells.splice(shape.rows);
+  saveDiagrammes(); renderAll();
+  document.getElementById("colorPanel").style.display = "flex";
+  syncColorPanel();
+}
+
+function addTableCol() {
+  var diag = getCurrentDiagram();
+  var shape = selectedIds.length === 1 ? diag.shapes.find(function (s) { return s.id === selectedIds[0]; }) : null;
+  if (!shape || shape.type !== "table") return;
+  pushHistory();
+  var oldCols = shape.cols || 3;
+  shape.cols = oldCols + 1;
+  if (!shape.cells) shape.cells = [];
+  var rows = shape.rows || 3;
+  for (var ri = 0; ri < rows; ri++) {
+    if (!shape.cells[ri]) shape.cells[ri] = [];
+    shape.cells[ri].push("");
+  }
+  // Répartir la largeur : réduire les colonnes existantes proportionnellement
+  var oldWidths = getColWidths({ cols: oldCols, w: shape.w, colWidths: shape.colWidths });
+  var newColW = shape.w / shape.cols;
+  var scale = (shape.w - newColW) / shape.w;
+  shape.colWidths = oldWidths.map(function (w) { return w * scale; });
+  shape.colWidths.push(newColW);
+  saveDiagrammes(); renderAll();
+  document.getElementById("colorPanel").style.display = "flex";
+  syncColorPanel();
+}
+
+function removeTableCol() {
+  var diag = getCurrentDiagram();
+  var shape = selectedIds.length === 1 ? diag.shapes.find(function (s) { return s.id === selectedIds[0]; }) : null;
+  if (!shape || shape.type !== "table" || (shape.cols || 3) <= 1) return;
+  pushHistory();
+  var oldCols = shape.cols || 3;
+  shape.cols = oldCols - 1;
+  if (shape.cells) shape.cells.forEach(function (row) { if (row.length > shape.cols) row.splice(shape.cols); });
+  // Retirer la dernière colonne et rescaler les restantes pour remplir shape.w
+  var cw = getColWidths({ cols: oldCols, w: shape.w, colWidths: shape.colWidths });
+  cw.splice(shape.cols);
+  var total = cw.reduce(function (s, v) { return s + v; }, 0);
+  shape.colWidths = cw.map(function (w) { return w * shape.w / total; });
+  saveDiagrammes(); renderAll();
+  document.getElementById("colorPanel").style.display = "flex";
+  syncColorPanel();
+}
+
+// ── Overlay tableau (boutons +/− ligne/colonne sur le canvas) ──
+function updateTableOverlay() {
+  var ids = ["tcBtnAddCol","tcBtnRemoveCol","tcBtnAddRow","tcBtnRemoveRow"];
+  var hide = function () { ids.forEach(function (id) { var el = document.getElementById(id); if (el) el.style.display = "none"; }); };
+  if (boardLocked || selectedIds.length !== 1 || selectedType !== "shape") { hide(); return; }
+  var diag = getCurrentDiagram();
+  if (!diag) { hide(); return; }
+  var shape = diag.shapes.find(function (s) { return s.id === selectedIds[0]; });
+  if (!shape || shape.type !== "table") { hide(); return; }
+
+  var svg = document.getElementById("canvas");
+  var sr  = svg.getBoundingClientRect();
+  var sc  = viewTransform.scale;
+  var tx  = viewTransform.x, ty = viewTransform.y;
+  var right  = (shape.x + shape.w) * sc + tx + sr.left;
+  var bottom = (shape.y + shape.h) * sc + ty + sr.top;
+  var rows   = shape.rows || 3;
+  var cellH  = shape.h * sc / rows;
+  var BW = 22, GAP = 4;
+
+  // +/− col : à droite de la dernière ligne, centrés verticalement dans cette ligne
+  var lastRowCy = bottom - cellH / 2;
+  var ac = document.getElementById("tcBtnAddCol");
+  var rc = document.getElementById("tcBtnRemoveCol");
+  ac.style.left = (right + GAP) + "px";  ac.style.top = (lastRowCy - BW - 2) + "px";
+  rc.style.left = (right + GAP) + "px";  rc.style.top = (lastRowCy + 2) + "px";
+  ac.style.display = rc.style.display = "flex";
+
+  // +/− row : sous la dernière ligne, alignés à droite de la table
+  var ar = document.getElementById("tcBtnAddRow");
+  var rr = document.getElementById("tcBtnRemoveRow");
+  ar.style.left = (right - BW * 2 - GAP) + "px";  ar.style.top = (bottom + GAP) + "px";
+  rr.style.left = (right - BW - 2) + "px";         rr.style.top = (bottom + GAP) + "px";
+  ar.style.display = rr.style.display = "flex";
+}
+
+function syncColorPanel() {}
 
 function startArrowTextEdit(arrowId) {
   var diag = getCurrentDiagram();
@@ -1166,6 +1633,7 @@ function distToSeg(px, py, x1, y1, x2, y2) {
 function createArrow(fromId, toId) {
   var diag = getCurrentDiagram();
   if (diag.arrows.some(function (a) { return a.from === fromId && a.to === toId; })) return;
+  pushHistory();
   var arrow = { id: "a" + Date.now(), from: fromId, to: toId, label: "" };
   diag.arrows.push(arrow);
   saveDiagrammes();
@@ -1219,13 +1687,26 @@ function onMouseDown(e) {
     return;
   }
 
+  // Clic sur un chevron de redimensionnement de colonne
+  var colSepEl = e.target.closest("[data-col-sep]");
+  if (colSepEl) {
+    var csColIdx = parseInt(colSepEl.getAttribute("data-col-sep"), 10);
+    var csSid = colSepEl.getAttribute("data-shape-id");
+    var csShape = getCurrentDiagram().shapes.find(function (s) { return s.id === csSid; });
+    if (csShape) {
+      var csCw = getColWidths(csShape);
+      dragState = { type: "col-resize", id: csSid, colIdx: csColIdx, sx: pt.x, origWidths: csCw.slice(), snapshot: JSON.stringify(diagramsList) };
+    }
+    return;
+  }
+
   // Clic sur la poignée de resize
   var grip = e.target.closest(".resize-grip");
   if (grip) {
     var sid = grip.getAttribute("data-shape-id");
     var shape = getCurrentDiagram().shapes.find(function (s) { return s.id === sid; });
     if (shape) {
-      dragState = { type: "resize", id: sid, sx: pt.x, sy: pt.y, ow: shape.w, oh: shape.h };
+      dragState = { type: "resize", id: sid, sx: pt.x, sy: pt.y, ow: shape.w, oh: shape.h, snapshot: JSON.stringify(diagramsList) };
     }
     return;
   }
@@ -1238,7 +1719,20 @@ function onMouseDown(e) {
       var now = Date.now();
       if (now - lastClickTime < 350 && lastClickShapeId === shape.id) {
         lastClickTime = 0;  lastClickShapeId = null;
-        startTextEdit(shape.id);
+        if (shape.type === "table") {
+          var tDblRows = shape.rows || 3;
+          var tDblOffsets = getColOffsets(shape);
+          var tDblCw = getColWidths(shape);
+          var tDblRx = pt.x - shape.x;
+          var tDblC = tDblCw.length - 1;
+          for (var tci3 = 0; tci3 < tDblCw.length; tci3++) {
+            if (tDblRx < tDblOffsets[tci3] + tDblCw[tci3]) { tDblC = tci3; break; }
+          }
+          var tDblR = Math.min(tDblRows - 1, Math.max(0, Math.floor((pt.y - shape.y) / (shape.h / tDblRows))));
+          startTableCellEdit(shape.id, tDblR, tDblC);
+        } else {
+          startTextEdit(shape.id);
+        }
         return;
       }
       lastClickTime = now;  lastClickShapeId = shape.id;  lastClickArrowId = null;
@@ -1266,12 +1760,13 @@ function onMouseDown(e) {
             var s = diag.shapes.find(function (sh) { return sh.id === id; });
             return { id: id, ox: s ? s.x : 0, oy: s ? s.y : 0 };
           }),
+          snapshot: JSON.stringify(diagramsList),
         };
       } else {
         // Clic simple → sélection unique
         selectedIds = [shape.id];
         selectedId = shape.id;  selectedType = "shape";
-        dragState = { type: "move", id: shape.id, sx: pt.x, sy: pt.y, ox: shape.x, oy: shape.y };
+        dragState = { type: "move", id: shape.id, sx: pt.x, sy: pt.y, ox: shape.x, oy: shape.y, snapshot: JSON.stringify(diagramsList) };
         document.getElementById("colorPanel").style.display = "flex";
         renderAll();
       }
@@ -1353,6 +1848,7 @@ function onMouseMove(e) {
     rb.setAttribute("height", Math.abs(pt.y - rubberBandState.sy));
     rb.style.display = "";
   } else if (dragState) {
+    dragState.moved = true;
     var diag = getCurrentDiagram();
     if (dragState.type === "multi-move") {
       var dx = pt.x - dragState.sx;
@@ -1369,8 +1865,27 @@ function onMouseMove(e) {
         shape.x = Math.round(dragState.ox + pt.x - dragState.sx);
         shape.y = Math.round(dragState.oy + pt.y - dragState.sy);
       } else if (dragState.type === "resize") {
-        shape.w = Math.max(60, Math.round(dragState.ow + pt.x - dragState.sx));
-        shape.h = Math.max(30, Math.round(dragState.oh + pt.y - dragState.sy));
+        var newW = Math.max(60, Math.round(dragState.ow + pt.x - dragState.sx));
+        var newH = Math.max(30, Math.round(dragState.oh + pt.y - dragState.sy));
+        if (shape.type === "table" && shape.colWidths && shape.colWidths.length === (shape.cols || 3)) {
+          var oldW2 = shape.w;
+          shape.colWidths = shape.colWidths.map(function (cw) { return cw * newW / oldW2; });
+        }
+        shape.w = newW;
+        shape.h = newH;
+      } else if (dragState.type === "col-resize") {
+        var crCw = dragState.origWidths.slice();
+        var crDx = pt.x - dragState.sx;
+        var crCi = dragState.colIdx;
+        var MIN_COL = 20;
+        var crLeft  = Math.max(MIN_COL, crCw[crCi] + crDx);
+        var crRight = Math.max(MIN_COL, crCw[crCi + 1] - crDx);
+        var crTotal = crCw[crCi] + crCw[crCi + 1];
+        crLeft  = Math.min(crTotal - MIN_COL, crLeft);
+        crRight = crTotal - crLeft;
+        crCw[crCi] = crLeft;
+        crCw[crCi + 1] = crRight;
+        shape.colWidths = crCw;
       }
       renderAll();
     }
@@ -1416,6 +1931,10 @@ function onMouseUp(e) {
   }
 
   if (dragState) {
+    if (dragState.moved && dragState.snapshot) {
+      historyStack.push(dragState.snapshot);
+      if (historyStack.length > MAX_HISTORY) historyStack.shift();
+    }
     saveDiagrammes();
     dragState = null;
     renderAll();
@@ -1431,9 +1950,11 @@ function onWheel(e) {
   applyZoom(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - r.left, e.clientY - r.top);
 }
 
+
 // ── Coller des formes ──
 function pasteShapes() {
   if (clipboard.length === 0) return;
+  pushHistory();
   var diag = getCurrentDiagram();
   var now = Date.now();
   var pasted = clipboard.map(function (s, i) {
@@ -1505,6 +2026,33 @@ document.addEventListener("DOMContentLoaded", function () {
       editingShapeId = null;
       renderAll(); // restaure la visibilité du texte SVG
     }
+    if (e.key === "Tab" && editingTableCell !== null) {
+      e.preventDefault();
+      var diag = getCurrentDiagram();
+      var shape = diag.shapes.find(function (s) { return s.id === editingShapeId; });
+      if (!shape) return;
+      // Sauvegarder la cellule courante
+      if (!shape.cells) shape.cells = [];
+      while (shape.cells.length <= editingTableCell.row) shape.cells.push([]);
+      shape.cells[editingTableCell.row][editingTableCell.col] = postitInput.value;
+      var rows = shape.rows || 3;
+      var cols = shape.cols || 3;
+      var nextRow = editingTableCell.row;
+      var nextCol = editingTableCell.col + 1;
+      if (nextCol >= cols) { nextRow++; nextCol = 0; }
+      // Dernière cellule → ajouter une ligne
+      if (nextRow >= rows) {
+        pushHistory();
+        shape.rows = rows + 1;
+        if (!shape.cells) shape.cells = [];
+        while (shape.cells.length < shape.rows) shape.cells.push([]);
+        shape.cells[shape.rows - 1] = new Array(cols).fill("");
+      }
+      var shapeId = editingShapeId;
+      saveDiagrammes();
+      renderAll();
+      startTableCellEdit(shapeId, nextRow, nextCol);
+    }
     // Enter ajoute un saut de ligne (comportement natif textarea — pas de preventDefault)
   });
   postitInput.addEventListener("blur", function () {
@@ -1513,6 +2061,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   document.addEventListener("keydown", function (e) {
     if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") return;
+    if ((e.ctrlKey || e.metaKey) && e.key === "z") { e.preventDefault(); undoAction(); return; }
     if (boardLocked) return;
     if (e.key === "Delete" || e.key === "Backspace") deleteSelected();
     if (e.key === "Escape") {
@@ -1560,6 +2109,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("modalPremiereSauvegardeDiag").addEventListener("click", function (e) {
     if (e.target === this) this.classList.remove("open");
   });
+
 
   document.addEventListener("mousedown", function (e) {
     var panel = document.getElementById("diagramListPanel");
