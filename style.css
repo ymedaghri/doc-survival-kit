@@ -1113,6 +1113,16 @@ section.collapsed .links {
   color: #fff;
   border-color: #292524;
 }
+.diagram-back-btn {
+  color: #f97316;
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+.diagram-back-btn:hover {
+  background: #f97316 !important;
+  color: #fff !important;
+  border-color: #f97316 !important;
+}
 .diagram-sep {
   color: #d6d3d1;
   font-size: 1rem;
@@ -1228,7 +1238,7 @@ section.collapsed .links {
 .diagram-list-panel {
   position: fixed;
   top: 48px;
-  left: -240px;
+  left: 0;
   width: 220px;
   height: calc(100vh - 48px);
   background: #fff;
@@ -1236,11 +1246,12 @@ section.collapsed .links {
   z-index: 15;
   display: flex;
   flex-direction: column;
-  transition: left 0.2s ease;
+  transform: translateX(calc(-100% - 20px));
+  transition: transform 0.2s ease, width 0.2s ease;
   box-shadow: 3px 0 10px rgba(0, 0, 0, 0.06);
 }
 .diagram-list-panel.open {
-  left: 0;
+  transform: translateX(0);
 }
 .diagram-list-header {
   display: flex;
@@ -1294,27 +1305,48 @@ section.collapsed .links {
 .diagram-list-item.active {
   background: #fff7ed;
 }
-.diagram-list-item.dragging {
-  opacity: 0.4;
-}
-.diagram-list-item.drag-over-after {
-  border-bottom: 2px dashed #f97316;
-  background: #fff7ed;
-}
-.diagram-list-item.drag-over-before {
-  border-top: 2px dashed #f97316;
-  background: #fff7ed;
-}
 .diagram-list-grip {
-  font-size: 0.85rem;
-  color: #c7c3bf;
-  cursor: grab;
+  display: none;
+}
+.diagram-list-group {
+  display: block;
+}
+.diagram-list-children {
+  display: block;
+}
+.diagram-list-expand {
+  font-size: 0.65rem;
+  color: #a8a29e;
+  cursor: pointer;
   flex-shrink: 0;
   user-select: none;
-  line-height: 1;
+  width: 1em;
+  text-align: center;
+  transition: color 0.1s;
 }
-.diagram-list-grip:active {
-  cursor: grabbing;
+.diagram-list-expand:hover {
+  color: #292524;
+}
+.diagram-list-add {
+  opacity: 0;
+  font-size: 0.85rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #f97316;
+  background: #fff7ed;
+  cursor: pointer;
+  border: none;
+  flex-shrink: 0;
+  transition: opacity 0.1s, background 0.1s;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.diagram-list-item:hover .diagram-list-add {
+  opacity: 1;
+}
+.diagram-list-add:hover {
+  background: #f97316;
+  color: #fff;
 }
 .diagram-list-name {
   font-size: 0.8rem;
@@ -1342,6 +1374,31 @@ section.collapsed .links {
 .diagram-list-del:hover {
   background: #ef4444;
   color: #fff;
+}
+.link-picker-item {
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  color: #292524;
+  cursor: pointer;
+  transition: background 0.1s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.link-picker-item:hover {
+  background: #f5f5f4;
+}
+.link-picker-new {
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  color: #f97316;
+  cursor: pointer;
+  font-weight: 600;
+  border-top: 1px solid #e7e5e4;
+  transition: background 0.1s;
+}
+.link-picker-new:hover {
+  background: #fff7ed;
 }
 
 /* ── Palette de couleurs ── */

@@ -5,7 +5,11 @@
 // ── État global ──
 var currentTool = "select";
 var diagramsList = [];
-var currentDiagramIdx = 0;
+var currentDiagramId = null;
+var diagNavStack = [];
+var diagExpandedIds = {};
+var pendingParentId = null;
+var pendingNavDiagId = null;
 var viewTransform = { x: 60, y: 60, scale: 1 };
 var selectedId = null;
 var selectedType = null;   // "shape" | "arrow"
@@ -26,7 +30,7 @@ var lastClickShapeId = null;
 var lastClickArrowId = null;
 var editingArrowId = null;
 var boardLocked = false;
-var diagDragSrcIdx = null;
+var diagDragSrcId = null;
 var historyStack = [];
 var MAX_HISTORY = 50;
 
@@ -131,17 +135,103 @@ function wrapPostitLines(text, maxWidth, fontSize) {
   return result;
 }
 
+function findDiagramById(id, list) {
+  if (!list) return null;
+  for (var i = 0; i < list.length; i++) {
+    if (String(list[i].id) === String(id)) return list[i];
+    var found = findDiagramById(id, list[i].children);
+    if (found) return found;
+  }
+  return null;
+}
+
+function findParentListOf(id, list) {
+  if (!list) return null;
+  for (var i = 0; i < list.length; i++) {
+    if (String(list[i].id) === String(id)) return { list: list, index: i };
+    var found = findParentListOf(id, list[i].children);
+    if (found) return found;
+  }
+  return null;
+}
+
+function flattenDiagrams(list, result) {
+  result = result || [];
+  (list || []).forEach(function (d) {
+    result.push(d);
+    flattenDiagrams(d.children, result);
+  });
+  return result;
+}
+
+function calcMaxExpandedDepth(list, depth) {
+  var max = depth;
+  (list || []).forEach(function (d) {
+    if (d.children && d.children.length > 0 && diagExpandedIds[String(d.id)]) {
+      var childMax = calcMaxExpandedDepth(d.children, depth + 1);
+      max = Math.max(max, childMax);
+    }
+  });
+  return max;
+}
+
+function updateSidebarWidth() {
+  var depth = calcMaxExpandedDepth(diagramsList, 0);
+  var totalW = 220 + depth * 14;
+  var panel = document.getElementById("diagramListPanel");
+  if (!panel) return;
+  panel.style.width = totalW + "px";
+}
+
+function getAncestorPath(targetId, list, path) {
+  path = path || [];
+  for (var i = 0; i < (list || []).length; i++) {
+    var d = list[i];
+    if (String(d.id) === String(targetId)) return path;
+    var childPath = getAncestorPath(targetId, d.children, path.concat([String(d.id)]));
+    if (childPath !== null) return childPath;
+  }
+  return null;
+}
+
+function updateBackBtn() {
+  var btn = document.getElementById("btnDiagBack");
+  if (!btn) return;
+  btn.style.display = diagNavStack.length > 0 ? "inline-flex" : "none";
+}
+
 function getCurrentDiagram() {
-  return diagramsList[currentDiagramIdx] || null;
+  if (currentDiagramId !== null) {
+    var found = findDiagramById(currentDiagramId, diagramsList);
+    if (found) return found;
+  }
+  return diagramsList[0] || null;
 }
 
 // ── Persistance localStorage ──
 function loadDiagrammes() {
   try {
     var stored = JSON.parse(localStorage.getItem("mes_diagrammes"));
-    if (stored && stored.length) return stored;
+    if (stored && stored.length) {
+      var migrate = function (list) {
+        list.forEach(function (d) {
+          if (!d.children) d.children = [];
+          migrate(d.children);
+        });
+      };
+      migrate(stored);
+      return stored;
+    }
   } catch (e) {}
-  return JSON.parse(JSON.stringify(diagrammesDefaut));
+  var defaults = JSON.parse(JSON.stringify(diagrammesDefaut));
+  var migrate2 = function (list) {
+    list.forEach(function (d) {
+      if (!d.children) d.children = [];
+      migrate2(d.children);
+    });
+  };
+  migrate2(defaults);
+  return defaults;
 }
 
 function saveDiagrammes() {
@@ -157,7 +247,9 @@ function pushHistory() {
 function undoAction() {
   if (historyStack.length === 0) return;
   diagramsList = JSON.parse(historyStack.pop());
-  if (currentDiagramIdx >= diagramsList.length) currentDiagramIdx = diagramsList.length - 1;
+  if (!findDiagramById(currentDiagramId, diagramsList)) {
+    currentDiagramId = diagramsList[0] ? String(diagramsList[0].id) : null;
+  }
   saveDiagrammes();
   renderAll();
   renderDiagramList();
@@ -177,14 +269,14 @@ function getLockMap() {
   try { return JSON.parse(localStorage.getItem("diagrammes_lock") || "{}"); } catch(e) { return {}; }
 }
 function saveCurrentLock() {
-  var diag = diagramsList[currentDiagramIdx];
+  var diag = getCurrentDiagram();
   if (!diag) return;
   var map = getLockMap();
   map[diag.id] = boardLocked;
   localStorage.setItem("diagrammes_lock", JSON.stringify(map));
 }
-function restoreLockForDiagram(idx) {
-  var diag = diagramsList[idx];
+function restoreLockForDiagram(diagId) {
+  var diag = findDiagramById(diagId, diagramsList);
   if (!diag) return;
   var map = getLockMap();
   boardLocked = map[diag.id] === true;
@@ -213,14 +305,14 @@ function getZoomMap() {
   try { return JSON.parse(localStorage.getItem("diagrammes_zoom") || "{}"); } catch(e) { return {}; }
 }
 function saveCurrentZoom() {
-  var diag = diagramsList[currentDiagramIdx];
+  var diag = getCurrentDiagram();
   if (!diag) return;
   var map = getZoomMap();
   map[diag.id] = viewTransform.scale;
   localStorage.setItem("diagrammes_zoom", JSON.stringify(map));
 }
-function restoreZoomForDiagram(idx) {
-  var diag = diagramsList[idx];
+function restoreZoomForDiagram(diagId) {
+  var diag = findDiagramById(diagId, diagramsList);
   if (!diag) return;
   var map = getZoomMap();
   viewTransform.scale = map[diag.id] !== undefined ? map[diag.id] : 1;
@@ -864,6 +956,29 @@ function renderShape(shape) {
   // ── Texte non rendu pour les images ──
   if (shape.type === "image") return g;
 
+  // ── Indicateur de lien (diagramme enfant) ──
+  if (shape.linkedDiagramId && shape.type !== "image") {
+    var lnkCirc = createSVGEl("circle");
+    lnkCirc.setAttribute("cx", shape.x + shape.w - 5);
+    lnkCirc.setAttribute("cy", shape.y + 5);
+    lnkCirc.setAttribute("r", 6);
+    lnkCirc.setAttribute("fill", "#f97316");
+    lnkCirc.setAttribute("stroke", "#fff");
+    lnkCirc.setAttribute("stroke-width", 1.5);
+    lnkCirc.setAttribute("pointer-events", "none");
+    g.appendChild(lnkCirc);
+    var lnkTxt = createSVGEl("text");
+    lnkTxt.setAttribute("x", shape.x + shape.w - 5);
+    lnkTxt.setAttribute("y", shape.y + 8.5);
+    lnkTxt.setAttribute("text-anchor", "middle");
+    lnkTxt.setAttribute("font-size", "8");
+    lnkTxt.setAttribute("font-weight", "bold");
+    lnkTxt.setAttribute("fill", "#fff");
+    lnkTxt.setAttribute("pointer-events", "none");
+    lnkTxt.textContent = "\u2197";
+    g.appendChild(lnkTxt);
+  }
+
   // ── Points de connexion (visibles au hover et en mode flèche — sauf postit) ──
   if (shape.type !== "postit") {
     var hcx = shape.x + shape.w / 2, hcy = shape.y + shape.h / 2;
@@ -989,104 +1104,93 @@ function renderAll() {
   updateTableOverlay();
 }
 
+function renderDiagramListLevel(list, depth) {
+  return (list || []).map(function (d) {
+    var isActive = String(d.id) === String(currentDiagramId);
+    var isExpanded = !!diagExpandedIds[String(d.id)];
+    var hasChildren = d.children && d.children.length > 0;
+    var indent = 10 + depth * 14;
+    var childrenHtml = (isExpanded && hasChildren)
+      ? '<div class="diagram-list-children">' + renderDiagramListLevel(d.children, depth + 1) + '</div>'
+      : '';
+    return (
+      '<div class="diagram-list-group">' +
+      '<div class="diagram-list-item' + (isActive ? ' active' : '') + '"' +
+      ' style="padding-left:' + indent + 'px"' +
+      ' onclick="selectDiagramme(\'' + d.id + '\', true)">' +
+      '<span class="diagram-list-expand" onclick="event.stopPropagation();toggleDiagExpand(\'' + d.id + '\')">' +
+      (hasChildren ? (isExpanded ? '&#9660;' : '&#9658;') : '<span style="display:inline-block;width:0.7em"></span>') +
+      '</span>' +
+      '<span class="diagram-list-name">' + escDiag(d.titre) + '</span>' +
+      '<button class="diagram-list-add" onclick="event.stopPropagation();creerEnfantDiagramme(\'' + d.id + '\')" title="Ajouter un diagramme enfant">+</button>' +
+      (depth > 0 || list.length > 1
+        ? '<button class="diagram-list-del" onclick="event.stopPropagation();supprimerDiagramme(\'' + d.id + '\')">×</button>'
+        : '') +
+      '</div>' +
+      childrenHtml +
+      '</div>'
+    );
+  }).join('');
+}
+
 function renderDiagramList() {
   var el = document.getElementById("diagramList");
-  el.innerHTML = diagramsList.map(function (d, i) {
-    var active = i === currentDiagramIdx ? " active" : "";
-    return (
-      '<div class="diagram-list-item' + active + '" draggable="true"' +
-      ' ondragstart="onDiagDragStart(event,' + i + ')"' +
-      ' ondragover="onDiagDragOver(event,' + i + ')"' +
-      ' ondragleave="onDiagDragLeave(event)"' +
-      ' ondrop="onDiagDrop(event,' + i + ')"' +
-      ' ondragend="onDiagDragEnd()"' +
-      ' onclick="selectDiagramme(' + i + ')">' +
-      '<span class="diagram-list-grip">⠿</span>' +
-      '<span class="diagram-list-name">' + escDiag(d.titre) + '</span>' +
-      (diagramsList.length > 1
-        ? '<button class="diagram-list-del" onclick="event.stopPropagation();supprimerDiagramme(' + i + ')">×</button>'
-        : "") +
-      "</div>"
-    );
-  }).join("");
+  if (!el) return;
+  el.innerHTML = renderDiagramListLevel(diagramsList, 0);
+  updateSidebarWidth();
 }
 
-function onDiagDragStart(e, idx) {
-  diagDragSrcIdx = idx;
-  e.dataTransfer.effectAllowed = "move";
-  e.currentTarget.classList.add("dragging");
-}
-
-function onDiagDragOver(e, idx) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = "move";
-  document.querySelectorAll(".diagram-list-item").forEach(function (el) {
-    el.classList.remove("drag-over-after", "drag-over-before");
-  });
-  if (idx !== diagDragSrcIdx) {
-    var goingDown = diagDragSrcIdx < idx;
-    e.currentTarget.classList.add(goingDown ? "drag-over-after" : "drag-over-before");
-  }
-}
-
-function onDiagDragLeave(e) {
-  e.currentTarget.classList.remove("drag-over-after", "drag-over-before");
-}
-
-function onDiagDrop(e, idx) {
-  e.preventDefault();
-  if (diagDragSrcIdx === null || diagDragSrcIdx === idx) {
-    onDiagDragEnd();
-    return;
-  }
-  var src = diagDragSrcIdx;
-  var item = diagramsList.splice(src, 1)[0];
-
-  // insertAt = idx dans les deux cas :
-  // - descente (src < idx) : après remove, la cible est à idx-1, on insère à idx = après elle ✓
-  // - montée  (src > idx) : après remove, la cible est toujours à idx, on insère à idx = avant elle ✓
-  diagramsList.splice(idx, 0, item);
-
-  var cur = currentDiagramIdx;
-  if (cur === src) {
-    currentDiagramIdx = idx;
+function toggleDiagExpand(id) {
+  var key = String(id);
+  if (diagExpandedIds[key]) {
+    delete diagExpandedIds[key];
   } else {
-    var adjustedCur = cur > src ? cur - 1 : cur;
-    currentDiagramIdx = adjustedCur >= idx ? adjustedCur + 1 : adjustedCur;
+    diagExpandedIds[key] = true;
   }
-  localStorage.setItem("current_diagram_idx", currentDiagramIdx);
-  diagDragSrcIdx = null;
-  saveDiagrammes();
   renderDiagramList();
 }
 
-function onDiagDragEnd() {
-  diagDragSrcIdx = null;
-  document.querySelectorAll(".diagram-list-item").forEach(function (el) {
-    el.classList.remove("dragging", "drag-over-after", "drag-over-before");
-  });
-}
-
 // ── Gestion des diagrammes ──
-function selectDiagramme(idx) {
+function selectDiagramme(id, clearStack) {
+  if (clearStack) diagNavStack = [];
   saveCurrentZoom();
   saveCurrentLock();
-  currentDiagramIdx = idx;
-  localStorage.setItem("current_diagram_idx", idx);
-  selectedId = null;  selectedType = null;
+  currentDiagramId = String(id);
+  localStorage.setItem("current_diagram_id", String(id));
+  selectedId = null; selectedType = null;
   selectedIds = [];
-  restoreZoomForDiagram(idx);
-  restoreLockForDiagram(idx);
+  pendingNavDiagId = null;
+  restoreZoomForDiagram(id);
+  restoreLockForDiagram(id);
   viewTransform.x = 60;
   viewTransform.y = 60;
   document.getElementById("colorPanel").style.display = "none";
   renderAll();
   updateLockBtn();
+  updateBackBtn();
   document.getElementById("diagramListPanel").classList.remove("open");
 }
 
+function goBackDiagram() {
+  if (diagNavStack.length === 0) return;
+  var prevId = diagNavStack.pop();
+  selectDiagramme(prevId);
+}
+
 function creerDiagramme() {
+  pendingParentId = null;
   pendingNewDiagram = true;
+  var input = document.getElementById("diagramTitle");
+  input.value = "";
+  input.placeholder = window.t ? window.t.diag_new_diagram : "Nouveau diagramme";
+  input.focus();
+  input.select();
+}
+
+function creerEnfantDiagramme(parentId) {
+  pendingParentId = String(parentId);
+  pendingNewDiagram = true;
+  diagExpandedIds[String(parentId)] = true;
   var input = document.getElementById("diagramTitle");
   input.value = "";
   input.placeholder = window.t ? window.t.diag_new_diagram : "Nouveau diagramme";
@@ -1100,10 +1204,21 @@ function confirmerNouveauDiagramme() {
   var input = document.getElementById("diagramTitle");
   var titre = input.value.trim() || (window.t ? window.t.diag_new_diagram : "Nouveau diagramme");
   input.placeholder = "";
-  var d = { id: Date.now(), titre: titre, shapes: [], arrows: [] };
-  diagramsList.push(d);
+  var d = { id: Date.now(), titre: titre, shapes: [], arrows: [], children: [] };
+  if (pendingParentId) {
+    var parent = findDiagramById(pendingParentId, diagramsList);
+    if (parent) {
+      if (!parent.children) parent.children = [];
+      parent.children.push(d);
+    } else {
+      diagramsList.push(d);
+    }
+    pendingParentId = null;
+  } else {
+    diagramsList.push(d);
+  }
   saveDiagrammes();
-  selectDiagramme(diagramsList.length - 1);
+  selectDiagramme(d.id);
   document.getElementById("diagramTitle").blur();
 }
 
@@ -1117,18 +1232,31 @@ function annulerNouveauDiagramme() {
   input.blur();
 }
 
-function supprimerDiagramme(idx) {
-  if (diagramsList.length <= 1) return;
+function supprimerDiagramme(id) {
+  var info = findParentListOf(id, diagramsList);
+  if (!info) return;
+  if (info.list === diagramsList && info.list.length <= 1) return;
   pushHistory();
-  diagramsList.splice(idx, 1);
-  if (currentDiagramIdx >= diagramsList.length) currentDiagramIdx = diagramsList.length - 1;
-  localStorage.setItem("current_diagram_idx", currentDiagramIdx);
+  info.list.splice(info.index, 1);
+  if (!findDiagramById(currentDiagramId, diagramsList)) {
+    currentDiagramId = diagramsList[0] ? String(diagramsList[0].id) : null;
+    localStorage.setItem("current_diagram_id", currentDiagramId || "");
+  }
   saveDiagrammes();
   renderAll();
 }
 
 function toggleDiagramList() {
-  document.getElementById("diagramListPanel").classList.toggle("open");
+  var panel = document.getElementById("diagramListPanel");
+  var isOpening = !panel.classList.contains("open");
+  panel.classList.toggle("open");
+  if (isOpening && currentDiagramId) {
+    var path = getAncestorPath(currentDiagramId, diagramsList);
+    if (path) {
+      path.forEach(function (id) { diagExpandedIds[id] = true; });
+      renderDiagramList();
+    }
+  }
 }
 
 // ── Outil actif ──
@@ -1560,7 +1688,98 @@ function updateTableOverlay() {
   ar.style.display = rr.style.display = "flex";
 }
 
-function syncColorPanel() {}
+function syncColorPanel() {
+  var btn = document.getElementById("btnShapeLink");
+  if (!btn) return;
+  if (selectedIds.length === 1 && selectedType === "shape") {
+    var diag = getCurrentDiagram();
+    var shape = diag ? diag.shapes.find(function (s) { return s.id === selectedIds[0]; }) : null;
+    if (shape && shape.linkedDiagramId) {
+      btn.classList.add("active");
+      var linked = findDiagramById(shape.linkedDiagramId, diagramsList);
+      btn.title = linked ? "Lié à : " + linked.titre + " (cliquer pour délier)" : "Supprimer le lien";
+    } else {
+      btn.classList.remove("active");
+      btn.title = "Lier à un diagramme enfant";
+    }
+    btn.style.display = "";
+  } else {
+    btn.classList.remove("active");
+    btn.style.display = "none";
+  }
+}
+
+function toggleShapeLink() {
+  if (selectedIds.length !== 1 || selectedType !== "shape") return;
+  var diag = getCurrentDiagram();
+  var shape = diag ? diag.shapes.find(function (s) { return s.id === selectedIds[0]; }) : null;
+  if (!shape) return;
+  if (shape.linkedDiagramId) {
+    pushHistory();
+    delete shape.linkedDiagramId;
+    saveDiagrammes();
+    renderAll();
+    syncColorPanel();
+    hideLinkPicker();
+  } else {
+    showLinkPicker();
+  }
+}
+
+function showLinkPicker() {
+  var panel = document.getElementById("linkPickerPanel");
+  if (!panel) return;
+  var btn = document.getElementById("btnShapeLink");
+  var r = btn ? btn.getBoundingClientRect() : { bottom: 100, left: 200 };
+  panel.style.top = (r.bottom + 6) + "px";
+  panel.style.left = r.left + "px";
+  var all = flattenDiagrams(diagramsList);
+  var curId = String(currentDiagramId);
+  var items = all.filter(function (d) { return String(d.id) !== curId; });
+  var html = items.map(function (d) {
+    return '<div class="link-picker-item" onclick="lierForme(\'' + d.id + '\')">' + escDiag(d.titre) + '</div>';
+  }).join("");
+  html += '<div class="link-picker-new" onclick="creerEnfantEtLier()">+ Nouveau diagramme enfant</div>';
+  document.getElementById("linkPickerList").innerHTML = html;
+  panel.style.display = "block";
+}
+
+function hideLinkPicker() {
+  var panel = document.getElementById("linkPickerPanel");
+  if (panel) panel.style.display = "none";
+}
+
+function lierForme(diagId) {
+  if (selectedIds.length !== 1) return;
+  var diag = getCurrentDiagram();
+  var shape = diag ? diag.shapes.find(function (s) { return s.id === selectedIds[0]; }) : null;
+  if (!shape) return;
+  pushHistory();
+  shape.linkedDiagramId = String(diagId);
+  hideLinkPicker();
+  saveDiagrammes();
+  renderAll();
+  syncColorPanel();
+}
+
+function creerEnfantEtLier() {
+  if (selectedIds.length !== 1) return;
+  var diag = getCurrentDiagram();
+  var shape = diag ? diag.shapes.find(function (s) { return s.id === selectedIds[0]; }) : null;
+  if (!shape) return;
+  hideLinkPicker();
+  var titre = shape.text || "Sous-diagramme";
+  var child = { id: Date.now(), titre: titre, shapes: [], arrows: [], children: [] };
+  if (!diag.children) diag.children = [];
+  diag.children.push(child);
+  diagExpandedIds[String(diag.id)] = true;
+  pushHistory();
+  shape.linkedDiagramId = String(child.id);
+  saveDiagrammes();
+  renderAll();
+  renderDiagramList();
+  syncColorPanel();
+}
 
 function startArrowTextEdit(arrowId) {
   var diag = getCurrentDiagram();
@@ -1931,6 +2150,9 @@ function onMouseUp(e) {
   }
 
   if (dragState) {
+    var wasMoved = dragState.moved;
+    var draggedId = dragState.id;
+    var dragType = dragState.type;
     if (dragState.moved && dragState.snapshot) {
       historyStack.push(dragState.snapshot);
       if (historyStack.length > MAX_HISTORY) historyStack.shift();
@@ -1938,6 +2160,21 @@ function onMouseUp(e) {
     saveDiagrammes();
     dragState = null;
     renderAll();
+    // Naviguer vers le diagramme lié si clic sans déplacement
+    if (!wasMoved && dragType === "move" && draggedId && !e.shiftKey) {
+      var diag = getCurrentDiagram();
+      var clickedShape = diag ? diag.shapes.find(function (s) { return s.id === draggedId; }) : null;
+      if (clickedShape && clickedShape.linkedDiagramId) {
+        var target = findDiagramById(clickedShape.linkedDiagramId, diagramsList);
+        if (target) {
+          hideLinkPicker();
+          diagNavStack.push(currentDiagramId);
+          if (diagNavStack.length > 30) diagNavStack.shift();
+          selectDiagramme(clickedShape.linkedDiagramId);
+          return;
+        }
+      }
+    }
   }
   panStart = null;
 }
@@ -1977,14 +2214,22 @@ function pasteShapes() {
 document.addEventListener("DOMContentLoaded", function () {
   diagramsList = loadDiagrammes();
   if (!localStorage.getItem("mes_diagrammes")) saveDiagrammes();
-  var savedIdx = parseInt(localStorage.getItem("current_diagram_idx"), 10);
-  if (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < diagramsList.length) {
-    currentDiagramIdx = savedIdx;
+  var savedDiagId = localStorage.getItem("current_diagram_id");
+  if (savedDiagId && findDiagramById(savedDiagId, diagramsList)) {
+    currentDiagramId = savedDiagId;
+  } else {
+    var savedIdx = parseInt(localStorage.getItem("current_diagram_idx"), 10);
+    if (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < diagramsList.length) {
+      currentDiagramId = String(diagramsList[savedIdx].id);
+    } else {
+      currentDiagramId = diagramsList[0] ? String(diagramsList[0].id) : null;
+    }
   }
-  restoreLockForDiagram(currentDiagramIdx);
+  restoreLockForDiagram(currentDiagramId);
   checkDiffDiagrammes();
   renderAll();
   updateLockBtn();
+  updateBackBtn();
 
   var canvas = document.getElementById("canvas");
   canvas.addEventListener("mousedown", onMouseDown);
@@ -2112,6 +2357,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
   document.addEventListener("mousedown", function (e) {
+    var lp = document.getElementById("linkPickerPanel");
+    if (lp && lp.style.display !== "none") {
+      var lbtn = document.getElementById("btnShapeLink");
+      if (!lp.contains(e.target) && e.target !== lbtn) hideLinkPicker();
+    }
     var panel = document.getElementById("diagramListPanel");
     if (!panel.classList.contains("open")) return;
     var burgerBtn = document.querySelector(".diagram-tool[onclick=\"toggleDiagramList()\"]");

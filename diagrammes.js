@@ -227,5 +227,6 @@ var diagrammesDefaut = [
         label: "",
       },
     ],
+    children: [],
   },
 ];
