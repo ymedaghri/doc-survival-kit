@@ -60,6 +60,7 @@ var COLORS = {
   "t-sky":    { fill: "rgba(224,242,254,0.75)", stroke: "#0284c7", text: "#0369a1" },
   "t-rose":   { fill: "rgba(255,228,230,0.75)", stroke: "#e11d48", text: "#be123c" },
   "t-teal":   { fill: "rgba(204,251,241,0.75)", stroke: "#0d9488", text: "#0f766e" },
+  "t-white":  { fill: "rgba(255,255,255,0.95)", stroke: "#d4d4d4", text: "#404040" },
 };
 var DEFAULT_COLOR = "t-sky";
 
@@ -2388,12 +2389,36 @@ document.addEventListener("DOMContentLoaded", function () {
   document.addEventListener("keydown", function (e) {
     if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") return;
     if ((e.ctrlKey || e.metaKey) && e.key === "z") { e.preventDefault(); undoAction(); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key === "a") {
+      e.preventDefault();
+      var diag = getCurrentDiagram();
+      if (diag && diag.shapes.length > 0) {
+        selectedIds = diag.shapes.map(function (s) { return s.id; });
+        selectedType = "shape";
+        selectedId = selectedIds[selectedIds.length - 1];
+        renderAll();
+        document.getElementById("colorPanel").style.display = "flex";
+        syncColorPanel();
+      }
+      return;
+    }
     if (boardLocked) return;
     if (e.key === "Delete" || e.key === "Backspace") deleteSelected();
     if (e.key === "Escape") {
       arrowSrcId = null;
       document.getElementById("tempArrow").style.display = "none";
       setTool("select");
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === "x") {
+      e.preventDefault();
+      if (selectedIds.length === 0) return;
+      var diag = getCurrentDiagram();
+      clipboard = selectedIds.map(function (id) {
+        var s = diag.shapes.find(function (sh) { return sh.id === id; });
+        return s ? JSON.parse(JSON.stringify(s)) : null;
+      }).filter(Boolean);
+      deleteSelected();
+      return;
     }
     if ((e.ctrlKey || e.metaKey) && e.key === "c") {
       e.preventDefault();

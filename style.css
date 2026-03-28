@@ -1446,6 +1446,10 @@ section.collapsed .links {
 .color-dot.t-teal {
   background: #0d9488;
 }
+.color-dot.t-white {
+  background: #fff;
+  border: 1.5px solid #d4d4d4;
+}
 .diagram-color-edit {
   font-size: 1rem;
   width: 24px;
