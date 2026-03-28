@@ -13,11 +13,18 @@ Fichiers du projet :
 | `style.css` | Tout le CSS (layout, typo, tâches, liens, notes, thèmes, modales, `.btn-admin`, `.btn-diagram`, page diagrammes) |
 | `mesLiens.js` | Données par défaut (`var mesLiensDefaut`) — chargé avant `liens.js` |
 | `mesNotes.js` | Données par défaut (`var mesNotesDefaut`) — chargé avant `notes.js` |
-| `diagrammes.js` | Données par défaut (`var diagrammesDefaut`) — chargé avant `diagram.js` |
+| `diagrammes.js` | Données par défaut (`var diagrammesDefaut`) — chargé avant les modules `diagram/` |
 | `liens.js` | Logique JS du panel mesLiens (CRUD catégories, liens, modales, mode édition, sauvegarde fichier) |
 | `taches.js` | Logique JS du panel mesTaches (CRUD tâches, filtres, rendu) |
 | `notes.js` | Logique JS du panel mesNotes (CRUD notes, blocs, modales, mode édition, sauvegarde fichier) |
-| `diagram.js` | Logique JS de l'éditeur de diagrammes (CRUD formes, flèches, pan/zoom, édition texte, sauvegarde fichier) |
+| `diagram/globals.js` | Variables d'état global, constantes (`COLORS`, `DEFAULT_SIZES`), utilitaires (`escDiag`, `createSVGEl`, `measureText`, `wrapPostitLines`, `getColWidths`, `getColOffsets`) |
+| `diagram/persistence.js` | Chargement/sauvegarde, undo/history, zoom et verrou par diagramme, File System Access API, image paste |
+| `diagram/render.js` | Rendu SVG (`renderShape`, `renderArrow`, `renderAll`), pan/zoom (`svgPoint`, `applyZoom`…), `getEdgePoint` |
+| `diagram/diagrams.js` | Arbre de diagrammes (find, flatten, ancestors), sidebar, CRUD diagrammes, navigation |
+| `diagram/shape-ops.js` | Outils de manipulation (`setTool`, `addShape`, couleur, police, alignement, rotation, z-order, pick mode, paste) |
+| `diagram/text-edit.js` | Édition texte inline, édition cellules tableau, overlay +/− lignes/colonnes, `startArrowTextEdit` |
+| `diagram/links.js` | Picker de liens (`syncColorPanel`, `toggleShapeLink`, `lierForme`, `lierFormeExterne`…) |
+| `diagram/events.js` | Événements souris (`onMouseDown/Move/Up`, `onWheel`), raccourcis clavier, initialisation `DOMContentLoaded` |
 | `i18n/fr.js` | Traductions françaises — déclare `var i18n_fr = {...}` |
 | `i18n/en.js` | Traductions anglaises — déclare `var i18n_en = {...}` |
 | `i18n/i18n.js` | Moteur i18n — lit `localStorage["lang"]`, expose `window.t` et `applyI18n()` |
@@ -235,6 +242,7 @@ Au premier chargement, si la clé est absente, on initialise avec `mesLiensDefau
 | `t-sky`    | Bleu ciel      |
 | `t-rose`   | Rose           |
 | `t-teal`   | Teal           |
+| `t-white`  | Blanc (fond blanc, contour gris clair, texte gris foncé) |
 
 Les mêmes thèmes s'appliquent aux notes (`.note.t-green`, etc.) et aux sections de liens (`.t-green`). La règle `.t-green h2` colore les titres des deux panels.
 
@@ -380,16 +388,31 @@ Page séparée accessible via le bouton `.btn-diagram` (icône SVG, `position: f
 | Fichier | Rôle |
 |---|---|
 | `diagram.html` | Structure HTML : barre d'outils, canvas SVG, panneau liste, palette couleurs, modale première sauvegarde |
-| `diagram.js` | Toute la logique : rendu SVG, interactions souris, pan/zoom, édition texte, persistance |
 | `diagrammes.js` | Données par défaut — déclare `var diagrammesDefaut` (tableau de diagrammes) |
+| `diagram/globals.js` | Variables d'état global, constantes, utilitaires partagés |
+| `diagram/persistence.js` | Chargement/sauvegarde localStorage, undo, zoom/lock par diagramme, File System API, image paste |
+| `diagram/render.js` | Rendu SVG complet, pan/zoom, `getEdgePoint` |
+| `diagram/diagrams.js` | Arbre de diagrammes, sidebar, CRUD, navigation |
+| `diagram/shape-ops.js` | Outils palette : couleur, police, alignement, rotation, z-order, pick mode, paste |
+| `diagram/text-edit.js` | Édition texte/table inline, overlay boutons tableau |
+| `diagram/links.js` | Picker de liens diagramme et URL externe |
+| `diagram/events.js` | Événements souris/clavier, initialisation |
 
-Ordre de chargement dans `diagram.html` :
+> **Note :** l'app tourne en mode `file://` — pas d'ES6 `import/export`. Tous les fichiers partagent le scope global et sont chargés via `<script src>` dans l'ordre suivant :
+
 ```html
 <script src="i18n/fr.js"></script>
 <script src="i18n/en.js"></script>
 <script src="i18n/i18n.js"></script>
-<script src="diagrammes.js"></script>  <!-- déclare diagrammesDefaut -->
-<script src="diagram.js"></script>
+<script src="diagrammes.js"></script>
+<script src="diagram/globals.js"></script>
+<script src="diagram/persistence.js"></script>
+<script src="diagram/render.js"></script>
+<script src="diagram/diagrams.js"></script>
+<script src="diagram/shape-ops.js"></script>
+<script src="diagram/text-edit.js"></script>
+<script src="diagram/links.js"></script>
+<script src="diagram/events.js"></script>
 ```
 
 ### Persistance
@@ -442,11 +465,13 @@ Champs optionnels de chaque forme (fallback si absent) :
 | `fontSize` | `number` | `12` (`13` pour `text`) | Taille de police en px |
 | `textAlign` | `"left"` \| `"center"` \| `"right"` | `"center"` | Alignement horizontal du texte |
 | `textValign` | `"top"` \| `"middle"` \| `"bottom"` | `"middle"` | Alignement vertical du texte |
-| `linkedDiagramId` | `string` \| absent | — | ID du diagramme enfant lié — un clic simple navigue vers lui |
+| `rotation` | `number` | `0` | Rotation en degrés (0–359) — appliquée via `transform="rotate(r, cx, cy)"` sur le groupe SVG |
+| `linkedDiagramId` | `string` \| absent | — | ID du diagramme enfant lié — un clic simple navigue vers lui (indicateur orange ↗) |
+| `externalUrl` | `string` \| absent | — | URL externe (`http://`, `https://` ou `file://`) — un clic ouvre dans un nouvel onglet (indicateur bleu ↗) |
 
 Le zoom de chaque diagramme est persisté séparément dans `localStorage["diagrammes_zoom"]` (objet `{ [diagramId]: scale }`) pour ne pas polluer le diff de `mes_diagrammes`.
 
-Le verrouillage de chaque diagramme est persisté séparément dans `localStorage["diagrammes_lock"]` (objet `{ [diagramId]: boolean }`). Quand un diagramme est verrouillé, tout clic sur le canvas déclenche uniquement le pan global — aucune sélection, aucun outil, aucun raccourci clavier ne fonctionne sur le board.
+Le verrouillage de chaque diagramme est persisté séparément dans `localStorage["diagrammes_lock"]` (objet `{ [diagramId]: boolean }`). Quand un diagramme est verrouillé, tout clic sur le canvas déclenche uniquement le pan global — aucune sélection, aucun outil, aucun raccourci clavier ne fonctionne sur le board. **Exception : un clic sans déplacement sur une forme ayant `linkedDiagramId` ou `externalUrl` navigue normalement, même en mode verrouillé.**
 
 ### Hiérarchie de diagrammes
 
@@ -462,12 +487,14 @@ La barre latérale (panneau ☰) affiche l'arbre complet des diagrammes avec ind
 - Clic sur une forme avec `linkedDiagramId` → navigue et **empile** le diagramme courant dans `diagNavStack`
 - Bouton ← (orange, après le cadenas) → dépile et revient — disparaît si la pile est vide
 
-**Lier une forme à un diagramme enfant :**
+**Lier une forme :**
 1. Sélectionner la forme
-2. Cliquer le bouton ⛓ dans la palette → ouvre un picker listant tous les diagrammes + option "Nouveau diagramme enfant"
-3. La forme affiche un indicateur orange ↗ dans son coin haut-droit
-4. Un clic simple (sans déplacement) navigue vers le diagramme lié
-5. Recliquer ⛓ sur une forme déjà liée → supprime le lien
+2. Cliquer le bouton ⛓ dans la palette → ouvre un picker avec trois options :
+   - liste des diagrammes existants → indicateur **orange** ↗
+   - "Nouveau diagramme enfant" → crée + lie → indicateur **orange** ↗
+   - "Lien externe (URL)" → champ de saisie validé par Entrée (`http://`, `https://` ou `file://`) → indicateur **bleu** ↗
+3. Un clic simple (sans déplacement) navigue vers le diagramme lié ou ouvre l'URL dans un nouvel onglet
+4. Recliquer ⛓ sur une forme déjà liée → supprime le lien (`linkedDiagramId` ou `externalUrl`)
 
 ### Types de formes
 
@@ -502,21 +529,27 @@ L'alignement vertical tient compte de la face haute du cylindre (`db`) : pour `t
 | Créer une flèche | Outil `arrow` + clic source → clic cible, **ou** drag depuis un conn-dot (tout outil) — la saisie du label s'ouvre automatiquement |
 | Éditer le texte d'une forme | Double-clic sur une forme **ou** bouton ✎ de la palette (forme sélectionnée) |
 | Éditer le label d'une flèche | Double-clic sur la flèche **ou** bouton ✎ (flèche sélectionnée) |
-| Changer la couleur | Palette couleurs (visible quand une forme est sélectionnée) |
+| Changer la couleur | Palette couleurs (visible quand une forme est sélectionnée) — inclut blanc (`t-white`) |
 | Changer la taille de police | Boutons `Aa+` / `Aa−` de la palette |
 | Aligner le texte horizontalement | Boutons ← / ↔ / → de la palette |
 | Aligner le texte verticalement | Boutons haut / milieu / bas de la palette |
 | Copier la taille de police | Bouton goutte vide → clic sur la forme source |
-| Copier le style complet | Bouton goutte pleine → clic sur la forme source (copie `fontSize`, `color`, `type`, `w`, `h`, `textAlign`, `textValign`) |
+| Copier le style complet | Bouton goutte pleine → clic sur la forme source (copie `fontSize`, `color`, `type`, `w`, `h`, `textAlign`, `textValign`, `rotation`) |
+| Rotation | Boutons ↺ / ↻ de la palette — ±15° par clic, clampé 0–359, persisté dans `shape.rotation` |
+| Z-order | Boutons "reculer" / "avancer" de la palette — déplace la forme d'un cran dans `diag.shapes` |
+| Sélectionner tout | `Ctrl+A` / `Cmd+A` — sélectionne toutes les formes du diagramme courant |
+| Couper | `Ctrl+X` / `Cmd+X` — copie dans le clipboard interne puis supprime |
 | Redimensionner | Drag de la poignée bas-droit (carré orange) |
 | Supprimer | Outil ✕ ou touche `Del` |
+| Désélectionner / fermer palette | `Échap` — désélectionne tout, ferme le link picker et masque la palette |
 | Pan | Drag sur le canvas vide (tout outil) |
 | Zoom | Molette souris (centré sur le curseur) ou boutons `−` / `+` / `⊡` |
 | Zoom persisté par diagramme | Chaque diagramme mémorise son niveau de zoom dans `localStorage["diagrammes_zoom"]` |
-| Verrouiller / déverrouiller | Bouton cadenas (🔓/🔒) dans la barre d'outils — bloque toutes les interactions sur le canvas (sélection, outils, raccourcis) sauf le pan ; état persisté par diagramme dans `localStorage["diagrammes_lock"]` |
+| Verrouiller / déverrouiller | Bouton cadenas (🔓/🔒) dans la barre d'outils — bloque toutes les interactions sauf le pan ; les clics sur formes liées naviguent quand même ; état persisté dans `localStorage["diagrammes_lock"]` |
 | Naviguer vers un diagramme enfant | Clic simple sur une forme avec `linkedDiagramId` — empile le diagramme courant dans `diagNavStack` |
+| Ouvrir un lien externe | Clic simple sur une forme avec `externalUrl` — ouvre dans un nouvel onglet |
 | Revenir au diagramme précédent | Bouton ← orange (après le cadenas) — visible uniquement si `diagNavStack` non vide |
-| Lier une forme à un diagramme | Bouton ⛓ dans la palette (forme sélectionnée) → picker de diagrammes ou création d'un enfant |
+| Lier une forme | Bouton ⛓ dans la palette → picker : diagramme existant, nouveau diagramme enfant, ou URL externe |
 | Ouvrir la barre latérale | Panneau ☰ — auto-expand des ancêtres du diagramme courant, item actif mis en évidence |
 | Créer un diagramme enfant | Bouton + au survol d'un item dans le panneau ☰ |
 | Fermer la barre latérale | Un clic sur un diagramme dans le panneau ☰ ferme automatiquement le panneau (et vide `diagNavStack`) |
@@ -562,9 +595,11 @@ lastClickTime = now2; lastClickArrowId = aid;
 | `changeShapeFontSize(delta)` | Incrémente / décrémente `fontSize` (clampé [8, 28]) sur les formes sélectionnées |
 | `setShapeTextAlign(align)` | Applique `textAlign` (`"left"` / `"center"` / `"right"`) aux formes sélectionnées |
 | `setShapeTextValign(valign)` | Applique `textValign` (`"top"` / `"middle"` / `"bottom"`) aux formes sélectionnées |
+| `rotateShape(delta)` | Incrémente `shape.rotation` de `delta` degrés (±15 typiquement), clampé 0–359 |
+| `changeShapeOrder(delta)` | Déplace les formes sélectionnées d'un cran dans `diag.shapes` (`delta=1` → avant-plan, `-1` → arrière-plan) |
 | `startPickMode(mode)` | Active le mode pick (`"fontSize"` ou `"fullStyle"`) — curseur croix, bouton orange |
 | `cancelPickMode()` | Annule le mode pick et restaure le curseur |
-| `applyPickMode(srcShape)` | Copie les attributs de style de `srcShape` vers les formes cibles |
+| `applyPickMode(srcShape)` | Copie les attributs de style de `srcShape` vers les formes cibles (inclut `rotation` en fullStyle) |
 | `deleteSelected()` | Supprime la forme ou la flèche sélectionnée |
 | `startTextEdit(shapeId)` | Ouvre l'overlay d'édition : textarea pour `postit`/`rect`/`rounded`/`db`/`cloud`, input pour `text` |
 | `startArrowTextEdit(arrowId)` | Positionne l'overlay au milieu de la flèche pour éditer son label |
@@ -585,12 +620,14 @@ lastClickTime = now2; lastClickArrowId = aid;
 | `toggleDiagExpand(id)` | Développe/réduit un nœud dans le panneau ☰ |
 | `renderDiagramListLevel(list, depth)` | Rendu récursif HTML d'un niveau de l'arbre (indentation, chevrons, boutons +/×) |
 | `renderDiagramList()` | Rendu complet de l'arbre + `updateSidebarWidth()` |
-| `toggleShapeLink()` | Lie / délie la forme sélectionnée à un diagramme (bouton ⛓ palette) |
-| `showLinkPicker()` | Ouvre le panneau flottant `#linkPickerPanel` avec la liste des diagrammes |
+| `toggleShapeLink()` | Lie / délie la forme sélectionnée (`linkedDiagramId` ou `externalUrl`) — bouton ⛓ palette |
+| `showLinkPicker()` | Ouvre le panneau flottant `#linkPickerPanel` : liste diagrammes + "Nouveau enfant" + "Lien externe" |
+| `showExternalLinkInput()` | Révèle le champ de saisie URL dans le picker |
+| `lierFormeExterne()` | Valide l'URL (`http://`, `https://` ou `file://`), affecte `externalUrl`, efface `linkedDiagramId` |
 | `hideLinkPicker()` | Ferme le panneau flottant |
-| `lierForme(diagId)` | Affecte `linkedDiagramId` à la forme sélectionnée et ferme le picker |
+| `lierForme(diagId)` | Affecte `linkedDiagramId` à la forme sélectionnée, efface `externalUrl`, ferme le picker |
 | `creerEnfantEtLier()` | Crée un diagramme enfant nommé d'après le texte de la forme et lie celle-ci |
-| `syncColorPanel()` | Met à jour l'état du bouton ⛓ (actif/inactif, tooltip) selon la forme sélectionnée |
+| `syncColorPanel()` | Met à jour l'état du bouton ⛓ (actif/inactif, tooltip) selon `linkedDiagramId` ou `externalUrl` |
 | `enregistrerDiagrammes()` | Sauvegarde dans `diagrammes.js` via File System Access API |
 | `getZoomMap()` / `saveCurrentZoom()` / `restoreZoomForDiagram(id)` | Persistance du zoom par diagramme dans `localStorage["diagrammes_zoom"]` |
 | `getLockMap()` / `saveCurrentLock()` / `restoreLockForDiagram(id)` | Persistance du verrou par diagramme dans `localStorage["diagrammes_lock"]` |
@@ -599,7 +636,7 @@ lastClickTime = now2; lastClickArrowId = aid;
 | `zoomIn()` / `zoomOut()` / `resetZoom()` | Contrôle du zoom (sauvegarde automatique dans `diagrammes_zoom`) |
 | `onMouseDown(e)` | Gestionnaire principal : pick mode, conn-dot drag, resize, sélection/déplacement, outil arrow, placement forme, double-clic |
 | `onMouseMove(e)` | Déplacement/redimensionnement en cours, pan, flèche temporaire |
-| `onMouseUp(e)` | Finalise drag, connexion flèche — navigue vers `linkedDiagramId` si clic sans déplacement |
+| `onMouseUp(e)` | Finalise drag, connexion flèche — navigue vers `linkedDiagramId` ou ouvre `externalUrl` si clic sans déplacement ; gère aussi ces navigations en mode verrouillé |
 | `onWheel(e)` | Zoom centré sur le curseur |
 
 ### État global (`diagram.js`)
