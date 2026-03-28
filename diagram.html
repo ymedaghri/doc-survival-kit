@@ -195,14 +195,27 @@
       <span style="width:1px;background:#e7e5e4;margin:0 4px;align-self:stretch;"></span>
       <button class="diagram-color-edit" id="btnRotateLeft" onclick="rotateShape(-15)" title="Rotation antihoraire (−15°)">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 7A4 4 0 1 0 7 3"/>
-          <polyline points="2,4.5 4,7 6.5,5.5"/>
+          <path d="M4 7A4 4 0 1 0 10 3 L5 3"/>
+          <polyline points="7,1.5 5,3 7,4.5"/>
         </svg>
       </button>
       <button class="diagram-color-edit" id="btnRotateRight" onclick="rotateShape(15)" title="Rotation horaire (+15°)">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10 7A4 4 0 1 1 7 3"/>
-          <polyline points="12,4.5 10,7 7.5,5.5"/>
+          <path d="M10 7A4 4 0 1 1 4 3 L9 3"/>
+          <polyline points="7,1.5 9,3 7,4.5"/>
+        </svg>
+      </button>
+      <span style="width:1px;background:#e7e5e4;margin:0 4px;align-self:stretch;"></span>
+      <button class="diagram-color-edit" id="btnOrderBack" onclick="changeShapeOrder(-1)" title="Reculer d'un niveau">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="5" width="8" height="8" rx="1"/>
+          <rect x="5" y="1" width="8" height="8" rx="1" stroke-opacity="0.35"/>
+        </svg>
+      </button>
+      <button class="diagram-color-edit" id="btnOrderFront" onclick="changeShapeOrder(1)" title="Avancer d'un niveau">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="5" width="8" height="8" rx="1" stroke-opacity="0.35"/>
+          <rect x="5" y="1" width="8" height="8" rx="1"/>
         </svg>
       </button>
       <span style="width:1px;background:#e7e5e4;margin:0 4px;align-self:stretch;"></span>

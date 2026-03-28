@@ -1472,6 +1472,29 @@ function rotateShape(delta) {
   renderAll();
 }
 
+function changeShapeOrder(delta) {
+  var diag = getCurrentDiagram();
+  if (!diag || selectedIds.length === 0) return;
+  pushHistory();
+  if (delta > 0) {
+    // Avancer : parcourir de la fin vers le début
+    for (var i = diag.shapes.length - 1; i >= 0; i--) {
+      if (selectedIds.indexOf(diag.shapes[i].id) !== -1 && i < diag.shapes.length - 1) {
+        var tmp = diag.shapes[i]; diag.shapes[i] = diag.shapes[i + 1]; diag.shapes[i + 1] = tmp;
+      }
+    }
+  } else {
+    // Reculer : parcourir du début vers la fin
+    for (var i = 0; i < diag.shapes.length; i++) {
+      if (selectedIds.indexOf(diag.shapes[i].id) !== -1 && i > 0) {
+        var tmp = diag.shapes[i]; diag.shapes[i] = diag.shapes[i - 1]; diag.shapes[i - 1] = tmp;
+      }
+    }
+  }
+  saveDiagrammes();
+  renderAll();
+}
+
 // ── Édition texte inline ──
 function startTextEdit(shapeId) {
   var diag = getCurrentDiagram();
