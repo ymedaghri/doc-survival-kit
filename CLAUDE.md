@@ -398,7 +398,11 @@ Stocké dans `localStorage` sous la clé `"mes_diagrammes"`.
 Sauvegarde dans `diagrammes.js` via la File System Access API (même mécanisme que `mesLiens.js` / `mesNotes.js`).
 Clé IndexedDB : `"diagrammes"` (base `doc-survival-kit-db` / store `fileHandles`).
 
+L'ID du diagramme courant est persisté dans `localStorage["current_diagram_id"]` (string). Migration automatique depuis l'ancienne clé `"current_diagram_idx"` au premier chargement.
+
 ### Structure des données
+
+La structure est un **arbre** : chaque diagramme peut avoir des enfants (`children`). Les diagrammes racine sont dans le tableau `diagrammesDefaut` / `diagramsList`. Les enfants sont imbriqués récursivement.
 
 ```json
 [
@@ -411,11 +415,21 @@ Clé IndexedDB : `"diagrammes"` (base `doc-survival-kit-db` / store `fileHandles
         "text": "Texte", "color": "t-sky",
         "fontSize": 12,
         "textAlign": "center",
-        "textValign": "middle"
+        "textValign": "middle",
+        "linkedDiagramId": "1700000000001"
       }
     ],
     "arrows": [
       { "id": "a1", "from": "s1", "to": "s2", "label": "" }
+    ],
+    "children": [
+      {
+        "id": 1700000000001,
+        "titre": "Sous-diagramme",
+        "shapes": [],
+        "arrows": [],
+        "children": []
+      }
     ]
   }
 ]
@@ -428,10 +442,32 @@ Champs optionnels de chaque forme (fallback si absent) :
 | `fontSize` | `number` | `12` (`13` pour `text`) | Taille de police en px |
 | `textAlign` | `"left"` \| `"center"` \| `"right"` | `"center"` | Alignement horizontal du texte |
 | `textValign` | `"top"` \| `"middle"` \| `"bottom"` | `"middle"` | Alignement vertical du texte |
+| `linkedDiagramId` | `string` \| absent | — | ID du diagramme enfant lié — un clic simple navigue vers lui |
 
 Le zoom de chaque diagramme est persisté séparément dans `localStorage["diagrammes_zoom"]` (objet `{ [diagramId]: scale }`) pour ne pas polluer le diff de `mes_diagrammes`.
 
 Le verrouillage de chaque diagramme est persisté séparément dans `localStorage["diagrammes_lock"]` (objet `{ [diagramId]: boolean }`). Quand un diagramme est verrouillé, tout clic sur le canvas déclenche uniquement le pan global — aucune sélection, aucun outil, aucun raccourci clavier ne fonctionne sur le board.
+
+### Hiérarchie de diagrammes
+
+La barre latérale (panneau ☰) affiche l'arbre complet des diagrammes avec indentation par niveau. Chaque item a :
+- Un chevron **▶/▼** pour développer/réduire ses enfants
+- Un bouton **+** (visible au survol) pour créer un diagramme enfant
+- La largeur du panneau s'élargit dynamiquement : `220 + profondeur * 14` px
+
+À l'ouverture du panneau, `getAncestorPath()` remonte l'arbre et ouvre automatiquement tous les ancêtres du diagramme courant.
+
+**Navigation :**
+- Clic sur un item de la barre → navigue et **vide** la pile de navigation
+- Clic sur une forme avec `linkedDiagramId` → navigue et **empile** le diagramme courant dans `diagNavStack`
+- Bouton ← (orange, après le cadenas) → dépile et revient — disparaît si la pile est vide
+
+**Lier une forme à un diagramme enfant :**
+1. Sélectionner la forme
+2. Cliquer le bouton ⛓ dans la palette → ouvre un picker listant tous les diagrammes + option "Nouveau diagramme enfant"
+3. La forme affiche un indicateur orange ↗ dans son coin haut-droit
+4. Un clic simple (sans déplacement) navigue vers le diagramme lié
+5. Recliquer ⛓ sur une forme déjà liée → supprime le lien
 
 ### Types de formes
 
@@ -478,8 +514,12 @@ L'alignement vertical tient compte de la face haute du cylindre (`db`) : pour `t
 | Zoom | Molette souris (centré sur le curseur) ou boutons `−` / `+` / `⊡` |
 | Zoom persisté par diagramme | Chaque diagramme mémorise son niveau de zoom dans `localStorage["diagrammes_zoom"]` |
 | Verrouiller / déverrouiller | Bouton cadenas (🔓/🔒) dans la barre d'outils — bloque toutes les interactions sur le canvas (sélection, outils, raccourcis) sauf le pan ; état persisté par diagramme dans `localStorage["diagrammes_lock"]` |
-| Fermer la barre latérale | Un clic sur un diagramme dans le panneau ☰ ferme automatiquement le panneau |
-| Réordonner les diagrammes | Drag & drop dans le panneau ☰ — poignée `⠿` à gauche de chaque item ; indicateur en pointillés (border-top si montée, border-bottom si descente) |
+| Naviguer vers un diagramme enfant | Clic simple sur une forme avec `linkedDiagramId` — empile le diagramme courant dans `diagNavStack` |
+| Revenir au diagramme précédent | Bouton ← orange (après le cadenas) — visible uniquement si `diagNavStack` non vide |
+| Lier une forme à un diagramme | Bouton ⛓ dans la palette (forme sélectionnée) → picker de diagrammes ou création d'un enfant |
+| Ouvrir la barre latérale | Panneau ☰ — auto-expand des ancêtres du diagramme courant, item actif mis en évidence |
+| Créer un diagramme enfant | Bouton + au survol d'un item dans le panneau ☰ |
+| Fermer la barre latérale | Un clic sur un diagramme dans le panneau ☰ ferme automatiquement le panneau (et vide `diagNavStack`) |
 
 ### Double-clic — implémentation
 
@@ -530,24 +570,36 @@ lastClickTime = now2; lastClickArrowId = aid;
 | `startArrowTextEdit(arrowId)` | Positionne l'overlay au milieu de la flèche pour éditer son label |
 | `confirmTextEdit()` | Sauvegarde le texte saisi (forme ou flèche) et masque l'overlay |
 | `createArrow(fromId, toId)` | Crée une flèche et ouvre immédiatement `startArrowTextEdit` |
-| `creerDiagramme()` | Ajoute un nouveau diagramme vide et le sélectionne |
-| `selectDiagramme(idx)` | Sauvegarde le zoom courant, change de diagramme, restaure son zoom, ferme le panneau liste |
-| `toggleDiagramList()` | Affiche / masque le panneau liste des diagrammes |
+| `findDiagramById(id, list)` | Recherche récursive d'un diagramme par ID dans l'arbre |
+| `findParentListOf(id, list)` | Retourne `{ list, index }` — le tableau parent et la position du diagramme |
+| `flattenDiagrams(list, result)` | Aplatit l'arbre en tableau (pour le link picker) |
+| `getAncestorPath(targetId, list, path)` | Retourne le tableau des IDs ancêtres du diagramme cible (pour auto-expand) |
+| `calcMaxExpandedDepth(list, depth)` | Calcule la profondeur maximale des nœuds développés (pour la largeur du panneau) |
+| `updateSidebarWidth()` | Ajuste la largeur du panneau ☰ : `220 + profondeur * 14` px |
+| `creerDiagramme()` | Ajoute un nouveau diagramme racine (saisie du titre via `#diagramTitle`) |
+| `creerEnfantDiagramme(parentId)` | Ajoute un diagramme enfant à `parentId`, développe le parent dans la barre |
+| `selectDiagramme(id, clearStack)` | Change de diagramme — si `clearStack=true` vide `diagNavStack` (appel depuis la sidebar) |
+| `goBackDiagram()` | Dépile `diagNavStack` et navigue au diagramme précédent |
+| `updateBackBtn()` | Affiche/masque le bouton ← selon `diagNavStack.length` |
+| `toggleDiagramList()` | Affiche/masque le panneau ☰ — à l'ouverture, auto-expand des ancêtres du diagramme courant |
+| `toggleDiagExpand(id)` | Développe/réduit un nœud dans le panneau ☰ |
+| `renderDiagramListLevel(list, depth)` | Rendu récursif HTML d'un niveau de l'arbre (indentation, chevrons, boutons +/×) |
+| `renderDiagramList()` | Rendu complet de l'arbre + `updateSidebarWidth()` |
+| `toggleShapeLink()` | Lie / délie la forme sélectionnée à un diagramme (bouton ⛓ palette) |
+| `showLinkPicker()` | Ouvre le panneau flottant `#linkPickerPanel` avec la liste des diagrammes |
+| `hideLinkPicker()` | Ferme le panneau flottant |
+| `lierForme(diagId)` | Affecte `linkedDiagramId` à la forme sélectionnée et ferme le picker |
+| `creerEnfantEtLier()` | Crée un diagramme enfant nommé d'après le texte de la forme et lie celle-ci |
+| `syncColorPanel()` | Met à jour l'état du bouton ⛓ (actif/inactif, tooltip) selon la forme sélectionnée |
 | `enregistrerDiagrammes()` | Sauvegarde dans `diagrammes.js` via File System Access API |
-| `getZoomMap()` / `saveCurrentZoom()` / `restoreZoomForDiagram(idx)` | Persistance du zoom par diagramme dans `localStorage["diagrammes_zoom"]` |
-| `getLockMap()` / `saveCurrentLock()` / `restoreLockForDiagram(idx)` | Persistance du verrou par diagramme dans `localStorage["diagrammes_lock"]` |
+| `getZoomMap()` / `saveCurrentZoom()` / `restoreZoomForDiagram(id)` | Persistance du zoom par diagramme dans `localStorage["diagrammes_zoom"]` |
+| `getLockMap()` / `saveCurrentLock()` / `restoreLockForDiagram(id)` | Persistance du verrou par diagramme dans `localStorage["diagrammes_lock"]` |
 | `toggleBoardLock()` | Bascule le verrou, sauvegarde, désélectionne tout si verrouillé, met à jour le bouton |
 | `updateLockBtn()` | Met à jour l'icône et le titre du bouton `#btnLock` selon `boardLocked` |
-| `renderDiagramList()` | Rendu de la liste avec poignée drag `⠿`, attributs `draggable` et handlers drag & drop |
-| `onDiagDragStart(e, idx)` | Démarre le drag — mémorise `diagDragSrcIdx`, ajoute la classe `.dragging` |
-| `onDiagDragOver(e, idx)` | Affiche l'indicateur de drop (`.drag-over-before` si montée, `.drag-over-after` si descente) |
-| `onDiagDragLeave(e)` | Retire l'indicateur de drop |
-| `onDiagDrop(e, idx)` | Réordonne `diagramsList`, met à jour `currentDiagramIdx`, sauvegarde et re-rend |
-| `onDiagDragEnd()` | Nettoie les classes de drag |
 | `zoomIn()` / `zoomOut()` / `resetZoom()` | Contrôle du zoom (sauvegarde automatique dans `diagrammes_zoom`) |
 | `onMouseDown(e)` | Gestionnaire principal : pick mode, conn-dot drag, resize, sélection/déplacement, outil arrow, placement forme, double-clic |
 | `onMouseMove(e)` | Déplacement/redimensionnement en cours, pan, flèche temporaire |
-| `onMouseUp(e)` | Finalise drag, connexion flèche |
+| `onMouseUp(e)` | Finalise drag, connexion flèche — navigue vers `linkedDiagramId` si clic sans déplacement |
 | `onWheel(e)` | Zoom centré sur le curseur |
 
 ### État global (`diagram.js`)
@@ -555,8 +607,11 @@ lastClickTime = now2; lastClickArrowId = aid;
 | Variable | Rôle |
 |---|---|
 | `currentTool` | Outil actif (`"select"`, `"rect"`, `"rounded"`, `"db"`, `"cloud"`, `"text"`, `"postit"`, `"arrow"`) |
-| `diagramsList` | Tableau des diagrammes en mémoire |
-| `currentDiagramIdx` | Index du diagramme affiché |
+| `diagramsList` | Arbre des diagrammes en mémoire (tableau racine, chaque nœud a `children`) |
+| `currentDiagramId` | ID (string) du diagramme affiché — recherché dans l'arbre par `findDiagramById` |
+| `diagNavStack` | Pile des IDs de diagrammes — alimentée uniquement par les clics sur formes liées ; vidée par les clics sidebar |
+| `diagExpandedIds` | Objet `{ [id]: true }` — nœuds développés dans le panneau ☰ |
+| `pendingParentId` | ID du parent lors de la création d'un diagramme enfant (`null` = racine) |
 | `viewTransform` | `{ x, y, scale }` — état du pan/zoom |
 | `selectedId` / `selectedType` | Id et type (`"shape"` ou `"arrow"`) de l'élément sélectionné |
 | `selectedIds` | Tableau des ids sélectionnés (multi-sélection) |
@@ -567,7 +622,6 @@ lastClickTime = now2; lastClickArrowId = aid;
 | `lastClickTime` / `lastClickShapeId` / `lastClickArrowId` | Détection du double-clic manuel (formes et flèches) |
 | `editingShapeId` / `editingArrowId` | Id de l'élément dont le texte est en cours d'édition |
 | `boardLocked` | `true` si le diagramme courant est verrouillé (pan uniquement sur le canvas) |
-| `diagDragSrcIdx` | Index source pendant un drag & drop dans la liste des diagrammes |
 
 ---
 

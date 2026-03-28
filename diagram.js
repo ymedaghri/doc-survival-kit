@@ -979,6 +979,12 @@ function renderShape(shape) {
     g.appendChild(lnkTxt);
   }
 
+  // ── Rotation ──
+  if (shape.rotation) {
+    var rcx = shape.x + shape.w / 2, rcy = shape.y + shape.h / 2;
+    g.setAttribute("transform", "rotate(" + shape.rotation + "," + rcx + "," + rcy + ")");
+  }
+
   // ── Points de connexion (visibles au hover et en mode flèche — sauf postit) ──
   if (shape.type !== "postit") {
     var hcx = shape.x + shape.w / 2, hcy = shape.y + shape.h / 2;
@@ -1006,16 +1012,35 @@ function renderShape(shape) {
 function getEdgePoint(shape, targetX, targetY) {
   var cx = shape.x + shape.w / 2;
   var cy = shape.y + shape.h / 2;
-  var dx = targetX - cx, dy = targetY - cy;
-  if (dx === 0 && dy === 0) return { x: cx, y: shape.y };
-  var hw = shape.w / 2, hh = shape.h / 2;
-  if (Math.abs(dx) * hh > Math.abs(dy) * hw) {
-    var sx = dx > 0 ? 1 : -1;
-    return { x: cx + sx * hw, y: cy + dy * hw / Math.abs(dx) };
-  } else {
-    var sy = dy > 0 ? 1 : -1;
-    return { x: cx + dx * hh / Math.abs(dy), y: cy + sy * hh };
+  var lTargetX = targetX, lTargetY = targetY;
+  if (shape.rotation) {
+    var rad = -shape.rotation * Math.PI / 180;
+    var cos = Math.cos(rad), sin = Math.sin(rad);
+    var ddx = targetX - cx, ddy = targetY - cy;
+    lTargetX = cx + ddx * cos - ddy * sin;
+    lTargetY = cy + ddx * sin + ddy * cos;
   }
+  var dx = lTargetX - cx, dy = lTargetY - cy;
+  var p;
+  if (dx === 0 && dy === 0) {
+    p = { x: cx, y: shape.y };
+  } else {
+    var hw = shape.w / 2, hh = shape.h / 2;
+    if (Math.abs(dx) * hh > Math.abs(dy) * hw) {
+      var sx = dx > 0 ? 1 : -1;
+      p = { x: cx + sx * hw, y: cy + dy * hw / Math.abs(dx) };
+    } else {
+      var sy = dy > 0 ? 1 : -1;
+      p = { x: cx + dx * hh / Math.abs(dy), y: cy + sy * hh };
+    }
+  }
+  if (shape.rotation) {
+    var rad2 = shape.rotation * Math.PI / 180;
+    var cos2 = Math.cos(rad2), sin2 = Math.sin(rad2);
+    var ex = p.x - cx, ey = p.y - cy;
+    p = { x: cx + ex * cos2 - ey * sin2, y: cy + ex * sin2 + ey * cos2 };
+  }
+  return p;
 }
 
 function renderArrow(arrow, shapes) {
@@ -1425,12 +1450,26 @@ function applyPickMode(srcShape) {
       shape.h          = srcShape.h;
       shape.textAlign  = srcShape.textAlign  || "center";
       shape.textValign = srcShape.textValign || "middle";
+      shape.rotation   = srcShape.rotation   || 0;
     }
   });
   selectedIds = pickTargetIds.slice();
   saveDiagrammes();
   renderAll();
   document.getElementById("colorPanel").style.display = "flex";
+}
+
+function rotateShape(delta) {
+  var diag = getCurrentDiagram();
+  if (!diag || selectedIds.length === 0) return;
+  pushHistory();
+  selectedIds.forEach(function (id) {
+    var s = diag.shapes.find(function (sh) { return sh.id === id; });
+    if (!s || s.type === "image") return;
+    s.rotation = ((s.rotation || 0) + delta + 360) % 360;
+  });
+  saveDiagrammes();
+  renderAll();
 }
 
 // ── Édition texte inline ──
@@ -1820,7 +1859,16 @@ function shapeAt(x, y) {
   if (!diag) return null;
   for (var i = diag.shapes.length - 1; i >= 0; i--) {
     var s = diag.shapes[i];
-    if (x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h) return s;
+    var lx = x, ly = y;
+    if (s.rotation) {
+      var scx = s.x + s.w / 2, scy = s.y + s.h / 2;
+      var rad = -s.rotation * Math.PI / 180;
+      var cos = Math.cos(rad), sin = Math.sin(rad);
+      var ddx = x - scx, ddy = y - scy;
+      lx = scx + ddx * cos - ddy * sin;
+      ly = scy + ddx * sin + ddy * cos;
+    }
+    if (lx >= s.x && lx <= s.x + s.w && ly >= s.y && ly <= s.y + s.h) return s;
   }
   return null;
 }
@@ -2283,15 +2331,25 @@ document.addEventListener("DOMContentLoaded", function () {
       var rows = shape.rows || 3;
       var cols = shape.cols || 3;
       var nextRow = editingTableCell.row;
-      var nextCol = editingTableCell.col + 1;
-      if (nextCol >= cols) { nextRow++; nextCol = 0; }
-      // Dernière cellule → ajouter une ligne
-      if (nextRow >= rows) {
-        pushHistory();
-        shape.rows = rows + 1;
-        if (!shape.cells) shape.cells = [];
-        while (shape.cells.length < shape.rows) shape.cells.push([]);
-        shape.cells[shape.rows - 1] = new Array(cols).fill("");
+      var nextCol = editingTableCell.col;
+      if (e.shiftKey) {
+        // Shift+Tab : cellule précédente, s'arrête à la première
+        nextCol -= 1;
+        if (nextCol < 0) {
+          if (nextRow > 0) { nextRow--; nextCol = cols - 1; }
+          else { nextCol = 0; }
+        }
+      } else {
+        // Tab : cellule suivante, ajoute une ligne à la fin
+        nextCol += 1;
+        if (nextCol >= cols) { nextRow++; nextCol = 0; }
+        if (nextRow >= rows) {
+          pushHistory();
+          shape.rows = rows + 1;
+          if (!shape.cells) shape.cells = [];
+          while (shape.cells.length < shape.rows) shape.cells.push([]);
+          shape.cells[shape.rows - 1] = new Array(cols).fill("");
+        }
       }
       var shapeId = editingShapeId;
       saveDiagrammes();
