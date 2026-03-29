@@ -8,18 +8,18 @@
   "files": [
     "bin/",
     "i18n/",
-    "index.html",
+    "images/",
+    "diagram/",
     "admin.html",
     "diagram.html",
-    "style.css",
+    "diagrammes.js",
+    "index.html",
+    "liens.js",
     "mesLiens.js",
     "mesNotes.js",
-    "diagrammes.js",
-    "liens.js",
-    "taches.js",
-    "notes.js",
-    "diagram.js",
-    "images/"
+    "notes.js",    
+    "style.css",
+    "taches.js"
   ],
   "engines": {
     "node": ">=16.7.0"
