@@ -7,18 +7,34 @@ const { exec } = require("child_process");
 const DEST_DIR = path.join(process.cwd(), "doc-survival-kit");
 const SRC_DIR = path.join(__dirname, "..");
 const APP_FILES = [
-  "index.html",
   "admin.html",
   "diagram.html",
-  "style.css",
+  "index.html",
   "liens.js",
-  "taches.js",
   "notes.js",
-  "diagram.js",
+  "style.css",
+  "taches.js",
 ];
+const REFACTORED_FILES = [
+  "diagram/diagrams.js",
+  "diagram/events.js",
+  "diagram/globals.js",
+  "diagram/links.js",
+  "diagram/persistence.js",
+  "diagram/render.js",
+  "diagram/shape-ops.js",
+  "diagram/text-edit.js",
+];
+
 const DATA_FILES = ["mesLiens.js", "mesNotes.js", "diagrammes.js"];
 const I18N_FILES = ["i18n/fr.js", "i18n/en.js", "i18n/i18n.js"];
-const IMAGES_FILES = ["images/img_1774270331723.png"];
+const IMAGES_FILES = [
+  "images/img_1774270331723.png",
+  "images/img_1774709818351.png",
+  "images/img_1774711575731.png",
+  "images/img_1774712426980.png",
+  "images/img_1774817912280.png",
+];
 
 function openBrowser(filePath) {
   const url = "file://" + filePath;
@@ -47,6 +63,12 @@ if (fs.existsSync(DEST_DIR)) {
 
   // Fichiers app (toujours copiés)
   for (const file of APP_FILES) {
+    fs.copyFileSync(path.join(SRC_DIR, file), path.join(DEST_DIR, file));
+  }
+
+  // Fichiers modularisés (toujours copiés)
+  fs.mkdirSync(path.join(DEST_DIR, "diagram"), { recursive: true });
+  for (const file of REFACTORED_FILES) {
     fs.copyFileSync(path.join(SRC_DIR, file), path.join(DEST_DIR, file));
   }
 
