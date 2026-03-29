@@ -1,6 +1,6 @@
 {
   "name": "doc-survival-kit",
-  "version": "2.2.0",
+  "version": "2.1.0",
   "description": "Dashboard personnel offline : diagrammes, tâches, notes et liens dans un seul fichier HTML — fonctionne sans serveur via file://",
   "bin": {
     "doc-survival-kit": "./bin/cli.js"
