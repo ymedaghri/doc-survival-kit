@@ -104,7 +104,7 @@ When a shape is selected, a formatting palette appears. From left to right:
 
 | Control       | Effect                                                                                             |
 | ------------- | -------------------------------------------------------------------------------------------------- |
-| 6 colour dots | Apply a theme colour to the shape                                                                  |
+| 7 colour dots | Apply a theme colour to the shape                                                                  |
 | ✎             | Open the inline text editor                                                                        |
 | `Aa+` / `Aa−` | Increase / decrease font size (range: 8–28 px)                                                     |
 | ← / ↔ / →     | Horizontal text alignment: left / centre / right                                                   |
@@ -130,7 +130,6 @@ The lock button (🔓/🔒) in the toolbar freezes the diagram: all canvas inter
 
 - The ☰ button opens the diagram list panel — clicking a diagram name switches to it **and closes the panel automatically**
 - Diagram names **wrap to the next line** if they are too long — nothing is truncated
-- Diagrams can be **reordered by drag & drop** in the panel: grab the `⠿` handle on the left of any item, drag it up or down, and a dashed orange line shows exactly where it will land
 - The `+ New` button creates a new diagram
 - The ← button in the top-right returns to the main dashboard
 
@@ -187,12 +186,11 @@ Creates a `doc-survival-kit/` folder in the current directory and opens the appl
 
 ### Without any tool
 
-1. Copy the following files and folder into a new directory:
+1. Copy the following files and folders into a new directory:
 
 - `index.html`
 - `admin.html`
 - `diagram.html`
-- `diagram.js`
 - `diagrammes.js`
 - `liens.js`
 - `mesLiens.js`
@@ -200,7 +198,9 @@ Creates a `doc-survival-kit/` folder in the current directory and opens the appl
 - `notes.js`
 - `style.css`
 - `taches.js`
+- `diagram/` (entire folder)
 - `i18n/` (entire folder)
+- `images/` (entire folder)
 
 2. Open `index.html` in Chrome or Edge
 3. That's it.
