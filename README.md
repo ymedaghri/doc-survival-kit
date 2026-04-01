@@ -71,7 +71,7 @@ Your links organised by category, accessible in one click.
 
 A lightweight SVG diagram editor accessible via the diagram icon (top-right of the dashboard).
 
-![Diagram editor overview](images/diagram-overview.png)
+![Diagram editor overview](./diagram_overview.png)
 
 #### Shapes
 
